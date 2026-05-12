@@ -517,12 +517,29 @@ tests/
 
 ## Reference Documentation
 
-Full PRD available in: `prd_sistem_pengurusan_kontrak_suk_kedah.md`
-Refer to PRD for:
+### Core Documentation Files
+
+**1. PRD (Product Requirements Document):** `prd_sistem_pengurusan_kontrak_suk_kedah.md`
 - Complete functional requirements (FR-M1-001 through FR-M5-006)
 - 18 alert rule specifications (ALR-001 through ALR-032)
-- Database schema details (28 tables with relationships)
 - Non-functional requirements (performance, security, scalability)
-- UI/UX design specifications and wireframes
+- UI/UX design specifications
 - API integration specifications
 - Deployment architecture and hardware specs
+
+**2. ERD (Entity Relationship Diagram):** `erd.md`
+- Complete database schema for all 28 tables
+- Visual ERD diagrams (Mermaid format)
+- Table relationships and foreign keys
+- Indexes and performance optimization
+- Business rules and constraints
+- Migration strategy and data retention policies
+
+### Quick Schema Reference
+
+When working with database:
+1. Check `erd.md` for complete table schemas
+2. All transaction tables use soft delete (`deleted_at`)
+3. Row-level security via `jabatan_kod`, `seksyen_unit_id`, `pic_id`
+4. Foreign keys use `RESTRICT` or `CASCADE` appropriately
+5. Charset: `utf8mb4_unicode_ci` for Bahasa Malaysia support
