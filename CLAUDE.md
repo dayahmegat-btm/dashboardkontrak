@@ -535,6 +535,19 @@ tests/
 - Business rules and constraints
 - Migration strategy and data retention policies
 
+**3. Business Rules & System Logic:** `rules.md`
+- Contract kategorisasi logic (Kategori 1 & 2)
+- Complete alert rules engine (18 rules: ALR-001 to ALR-032)
+- Field validation rules for all forms
+- Workflow and approval flows
+- RBAC permission matrix and enforcement
+- Data scoping rules (row-level security)
+- Auto-calculation logic
+- Integration rules (API iDaftar, EPSM)
+- Security policies (passwords, 2FA, session timeout)
+- Audit trail requirements
+- Data retention and archival policies
+
 ### Quick Schema Reference
 
 When working with database:
