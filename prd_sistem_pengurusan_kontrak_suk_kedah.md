@@ -232,13 +232,14 @@ Sistem ini dibangunkan menggunakan **senibina tiga lapisan (3-tier architecture)
 
 #### 3.1.1 Lapisan Persembahan (Presentation Layer)
 
-- **Web UI** — Antaramuka utama berasaskan Blade + Livewire / Alpine.js untuk pegawai pejabat.
+- **Admin Panel** — Antaramuka pentadbiran berasaskan Laravel FilamentPHP v3.x untuk pengurusan sistem, master data, dan operasi harian.
 - **PWA** — Aplikasi web progresif untuk capaian melalui iOS dan Android. Boleh dipasang ke skrin utama dan menyokong push notification.
 - **API REST** — Endpoint untuk integrasi dan kegunaan masa hadapan (contoh: app native).
 
 #### 3.1.2 Lapisan Aplikasi (Application Layer)
 
 - **Laravel Framework 11.x** — Framework utama PHP dengan sokongan LTS sehingga tahun 2027.
+- **FilamentPHP 3.x** — Admin panel framework dengan UI/UX moden, built-in CRUD, form builder, table builder, dashboard widgets, dan notifications.
 - **Queue Worker** — Memproses kerja latar belakang seperti penghantaran e-mel dan push notification.
 - **Scheduler** — Menjalankan kerja berjadual seperti semakan harian peraturan alert.
 - **Cache Layer** — Redis untuk session, cache pertanyaan dan queue.
@@ -261,19 +262,19 @@ Sistem ini dibangunkan menggunakan **senibina tiga lapisan (3-tier architecture)
 ┌─────────────────────────────────────────────────────────────┐
 │   LAPISAN PERSEMBAHAN (Presentation)                        │
 │   ┌──────────┐  ┌──────────┐  ┌──────────────────────┐     │
-│   │ Web UI   │  │   PWA    │  │  API REST (mobile)   │     │
-│   │ Blade +  │  │ iOS/And. │  │  Laravel Sanctum     │     │
-│   │ Livewire │  │ Service  │  │  Auth                │     │
+│   │ Filament │  │   PWA    │  │  API REST (mobile)   │     │
+│   │ Admin    │  │ iOS/And. │  │  Laravel Sanctum     │     │
+│   │ Panel    │  │ Service  │  │  Auth                │     │
 │   └────┬─────┘  └────┬─────┘  └──────────┬───────────┘     │
 └────────┼─────────────┼──────────────────┼─────────────────┘
          ↓             ↓                  ↓
 ┌─────────────────────────────────────────────────────────────┐
-│   LAPISAN APLIKASI · Laravel 11 + PHP 8.2                   │
+│   LAPISAN APLIKASI · Laravel 11 + PHP 8.2 + Filament 3.x    │
 │                                                              │
 │   ┌──────────┐  ┌──────────┐  ┌──────────────────────┐     │
 │   │ HTTP     │  │ Queue    │  │  Scheduler           │     │
 │   │ Routes/  │  │ Worker   │  │  (Cron-based)        │     │
-│   │ Control  │  │ (Redis)  │  │  - Alert daily       │     │
+│   │ Filament │  │ (Redis)  │  │  - Alert daily       │     │
 │   └──────────┘  └──────────┘  └──────────────────────┘     │
 │                                                              │
 │   Modul: Auth | RBAC | SST | Kontrak | Bon | Notifikasi     │
@@ -810,34 +811,46 @@ Sistem akan dibangunkan sebagai **Progressive Web Application (PWA)** yang membe
 |---|---|---|---|
 | Bahasa Pengaturcaraan | PHP | 8.2 LTS | Stabil, sokongan panjang |
 | Framework Backend | Laravel | 11.x LTS | Standard kerajaan Malaysia, ekosistem matang |
+| Admin Panel Framework | FilamentPHP | 3.x | Modern admin panel, CRUD generator, form/table builder, dashboard widgets, TALL stack native |
 | Pangkalan Data | MySQL | 8.0 | Diperlukan oleh spec, stabil |
 | Cache & Queue | Redis | 7.x | Cepat, sokongan baik dalam Laravel |
 | Web Server | Nginx | 1.24+ | Prestasi tinggi |
-| Frontend Reactive | Livewire + Alpine.js | 3.x / 3.x | Sebahagian Laravel, kurang kompleks dari SPA |
+| Frontend Stack (TALL) | Tailwind CSS + Alpine.js + Livewire + Laravel | 3.x / 3.x / 3.x / 11.x | TALL stack - fully integrated, reactive tanpa JavaScript framework kompleks |
 | Build Tool | Vite | 5.x | Pantas, integrasi Laravel |
-| UI Framework | Tailwind CSS | 3.x | Utility-first, mudah customize |
 | PWA Library | Workbox | 7.x | Generate Service Worker, oleh Google |
 | Push Notification | Firebase Cloud Messaging | — | Sokong iOS + Android |
-| Authentication | Laravel Sanctum | 4.x | Untuk API token & SPA auth |
-| RBAC | spatie/laravel-permission | 6.x | Standard package RBAC Laravel |
+| Authentication | Laravel Sanctum + Filament Auth | 4.x / 3.x | API token & built-in Filament authentication |
+| RBAC | spatie/laravel-permission + Filament Shield | 6.x / 3.x | Standard RBAC + Filament UI integration |
 | Audit Trail | owen-it/laravel-auditing | 13.x | Track semua perubahan model |
-| Excel Import/Export | maatwebsite/excel | 3.x | Industry standard |
+| Excel Import/Export | maatwebsite/excel + Filament Excel | 3.x / 2.x | Industry standard + Filament actions |
 | PDF Generation | barryvdh/laravel-dompdf | 3.x | Untuk laporan PDF |
-| Chart Rendering | Chart.js | 4.x | Frontend chart untuk dashboard |
+| Chart Rendering | Filament Widgets + ApexCharts | 3.x | Built-in chart widgets untuk dashboard |
 | Hosting | On-Premise / Sovereign Cloud | — | Polisi Kerajaan Negeri |
 | OS Server | Ubuntu LTS | 22.04 / 24.04 | Stabil, sokongan panjang |
 
 ### 9.2 Package Laravel Tambahan
 
 ```text
+# Filament Core & Plugins
+filament/filament              # Core admin panel framework v3.x
+bezhansalleh/filament-shield   # RBAC UI for spatie/permission
+filament/spatie-laravel-media-library-plugin  # Media library integration
+pxlrbt/filament-excel          # Excel export actions
+filament/notifications         # In-app notifications UI
+
+# Laravel Core Packages
 spatie/laravel-permission      # RBAC framework
 owen-it/laravel-auditing       # Audit trail untuk model
 laravel/sanctum                # API authentication
 laravel/horizon                # Queue dashboard & monitoring
 laravel/telescope              # Debug tool (development sahaja)
+
+# External Integrations
 kreait/laravel-firebase        # Firebase Cloud Messaging integration
 maatwebsite/excel              # Excel import/export
 barryvdh/laravel-dompdf        # PDF generation
+
+# Utilities
 intervention/image             # Image manipulation
 spatie/laravel-activitylog     # Activity logging (alternatif)
 spatie/laravel-medialibrary    # File attachments management
@@ -1098,6 +1111,7 @@ Sistem ini perlu berintegrasi dengan beberapa sistem sedia ada untuk mengelakkan
 - **Maklum balas:** Setiap tindakan mesti diberi maklum balas visual segera.
 - **Toleransi ralat:** Pengguna boleh undo tindakan dalam tempoh tertentu.
 - **Pendekatan mobile-first:** Reka bentuk diutamakan untuk skrin kecil dahulu.
+- **FilamentPHP Design System:** Menggunakan Filament v3 design system dengan komponen yang konsisten, accessible (WCAG 2.1), dan responsive.
 
 ### 12.2 Halaman Utama Sistem
 
@@ -1117,26 +1131,28 @@ Sistem ini perlu berintegrasi dengan beberapa sistem sedia ada untuk mengelakkan
 | Master Data | Pengurusan jabatan, seksyen, kod | Admin |
 | Konfigurasi Alert | Edit peraturan dan templat alert | Admin |
 
-### 12.3 Komponen UI Standard
+### 12.3 Komponen UI Standard (Filament Built-in)
 
-- **Header:** Logo SUK Kedah, nama sistem, ikon notifikasi (bilangan unread), profil pengguna.
-- **Sidebar:** Navigasi modul mengikut peranan pengguna.
-- **Breadcrumbs:** Lokasi pengguna dalam sistem.
-- **Search Bar:** Carian global untuk SST, kontrak, pembekal.
-- **Filter Panel:** Filter mengikut jabatan, status, tarikh, dll.
-- **Data Table:** Senarai dengan paginasi, sort, eksport.
-- **Modal Dialog:** Untuk pengesahan dan borang ringkas.
-- **Toast Notifications:** Maklum balas tindakan (success, error, info).
-- **Loading State:** Skeleton screen untuk pemuatan data.
+- **Navigation:** Sidebar navigasi dengan grouping mengikut modul, responsive collapse untuk mobile.
+- **Global Search:** Carian global untuk SST, kontrak, pembekal (Filament global search).
+- **User Menu:** Avatar pengguna dengan dropdown (profil, tetapan, log keluar).
+- **Notifications:** Notification panel dengan badge count untuk unread alerts.
+- **Tables:** Filament Table Builder dengan filters, search, bulk actions, export, pagination.
+- **Forms:** Filament Form Builder dengan validation, wizard steps untuk borang kompleks.
+- **Actions:** Action buttons dengan confirmation modals, success/error notifications.
+- **Widgets:** Dashboard widgets untuk KPI cards, charts (Gantt, funnel, heatmap).
+- **Modal & Slide-over:** Untuk CRUD operations dan quick views.
+- **Notifications (Toast):** Maklum balas visual untuk semua tindakan.
 
 ### 12.4 Reka Bentuk Visual
 
-- **Warna utama:** Navy `#0B1A2B` — merujuk warna rasmi institusi.
-- **Warna aksen:** Emas `#B8893A` — untuk penonjolan kerajaan negeri.
+- **Warna utama:** Navy `#0B1A2B` — merujuk warna rasmi institusi (customize Filament primary color).
+- **Warna aksen:** Emas `#B8893A` — untuk penonjolan kerajaan negeri (customize Filament secondary color).
 - **Warna semantik:** Merah untuk kritikal, kuning untuk amaran, hijau untuk OK, biru untuk maklumat.
-- **Typography:** Calibri / Inter untuk badan teks, font serif (Fraunces / Playfair) untuk tajuk eksekutif.
-- **Spacing:** Sistem grid 8-pixel untuk konsistensi.
-- **Iconography:** Set ikon konsisten (Heroicons atau Lucide).
+- **Typography:** Inter font (Filament default) untuk badan teks, dengan pilihan font Bahasa Malaysia yang sesuai.
+- **Spacing:** Sistem grid 8-pixel untuk konsistensi (Tailwind default).
+- **Iconography:** Heroicons (Filament default) — set ikon konsisten dan accessible.
+- **Dark Mode:** Sokongan dark mode Filament (opsional untuk pengguna).
 
 ---
 

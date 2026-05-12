@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Sistem Pengurusan Dokumen Kontrak & Bon Pelaksanaan** - A contract and performance bond management system for Pejabat Setiausaha Kerajaan Negeri Kedah (SUK Kedah). The system manages 170+ active contracts worth over RM 18 million, tracking contract lifecycles from Surat Setuju Terima (SST/Letter of Acceptance) through performance bonds and completion.
 
 **Primary Language:** Bahasa Malaysia (UI, documentation, database) with technical terms in English
-**Technical Stack:** Laravel 11.x (PHP 8.2), MySQL 8.0, Redis 7.x, Livewire + Alpine.js, Tailwind CSS
-**Architecture:** Progressive Web Application (PWA) with push notifications via Firebase Cloud Messaging
+**Technical Stack:** Laravel 11.x (PHP 8.2), FilamentPHP 3.x, MySQL 8.0, Redis 7.x, TALL Stack (Tailwind, Alpine.js, Livewire, Laravel)
+**Architecture:** FilamentPHP admin panel + Progressive Web Application (PWA) with push notifications via Firebase Cloud Messaging
 
 ## Tech Stack & Versions
 
@@ -20,13 +20,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Web Server:** Nginx 1.24+
 
 ### Frontend
-- **Reactive UI:** Laravel Livewire 3.x + Alpine.js 3.x
+- **Admin Panel:** FilamentPHP 3.x (TALL stack: Tailwind CSS + Alpine.js + Livewire + Laravel)
 - **Styling:** Tailwind CSS 3.x
 - **Build Tool:** Vite 5.x
 - **PWA:** Workbox 7.x (Service Worker generation)
 
-### Key Laravel Packages
+### Key Packages
 ```
+# Filament Core & Plugins
+filament/filament              # Admin panel framework v3.x
+bezhansalleh/filament-shield   # RBAC UI for spatie/permission
+filament/spatie-laravel-media-library-plugin  # Media library integration
+pxlrbt/filament-excel          # Excel export actions
+filament/notifications         # In-app notifications UI
+
+# Laravel Core
 spatie/laravel-permission      # RBAC (7 predefined roles)
 owen-it/laravel-auditing       # Audit trail for all models
 laravel/sanctum                # API authentication
@@ -61,11 +69,20 @@ php artisan db:seed
 
 # Generate storage link
 php artisan storage:link
+
+# Create Filament admin user
+php artisan make:filament-user
+
+# Install Filament Shield (RBAC)
+php artisan shield:install
+
+# Generate shield policies and permissions
+php artisan shield:generate --all
 ```
 
 ### Development Workflow
 ```bash
-# Start local development server
+# Start local development server (Filament accessible at /admin)
 php artisan serve
 
 # Watch and compile frontend assets
@@ -77,8 +94,11 @@ php artisan queue:work
 # Run scheduler (for daily alert checks at 8:00 AM)
 php artisan schedule:work
 
-# Run Horizon (queue monitoring)
+# Run Horizon (queue monitoring at /horizon)
 php artisan horizon
+
+# Access Filament admin panel
+# Development: http://localhost:8000/admin
 ```
 
 ### Testing
@@ -113,10 +133,19 @@ php artisan test --parallel
 npm run lint
 ```
 
-### Database
+### Database & Filament Resources
 ```bash
 # Create new migration
 php artisan make:migration create_<table_name>_table
+
+# Create Filament resource (Model + Resource + Pages)
+php artisan make:filament-resource <ModelName> --generate
+
+# Create Filament widget (for dashboard)
+php artisan make:filament-widget <WidgetName>
+
+# Create Filament page
+php artisan make:filament-page <PageName>
 
 # Rollback last migration
 php artisan migrate:rollback
@@ -241,6 +270,110 @@ Implement via Eloquent global scopes based on `jabatan_kod` and `seksyen_unit_id
 - Background color: `#FFFFFF`
 - Splash screens for various device sizes
 
+## FilamentPHP Development Guidelines
+
+### Resource Structure
+Each main entity (DaftarSst, BonPelaksanaan, etc.) should have:
+- **Resource class** - Defines form schema, table columns, filters, actions
+- **List page** - Table view with bulk actions, filters, search
+- **Create page** - Form for new records with wizard steps for complex forms
+- **Edit page** - Form for updating records
+- **View page** - Read-only detailed view
+
+### Form Builders (Filament Forms)
+```php
+// Example structure for DaftarSst form
+Form::make([
+    Section::make('Maklumat Asas')
+        ->schema([
+            TextInput::make('no_rujukan_sst')->required(),
+            DatePicker::make('tarikh_sst')->required(),
+            Select::make('jabatan_kod')->relationship('jabatan', 'nama_jabatan'),
+            // Auto-fill from API EPSM/iDaftar using $get, $set
+        ]),
+    Section::make('Maklumat Pembekal')
+        ->schema([...]),
+])
+```
+
+### Table Builders (Filament Tables)
+- Use **filters** for jabatan, status, tarikh ranges
+- **Bulk actions** for export, status updates
+- **Custom actions** for PDF generation, alert triggering
+- **Column summarizers** for nilai_kontrak totals
+- **Toggle columns** for quick status changes
+
+### Dashboard Widgets
+Build custom widgets for:
+1. **Stats Overview Widget** - KPI cards (kontrak aktif, bon akan tamat, etc.)
+2. **Chart Widgets** - Gantt chart, funnel, heatmap using ApexCharts/Chart.js
+3. **Table Widget** - Recent alerts, pending actions
+4. **Custom Blade Widget** - Complex visualizations (kalendar risiko)
+
+### RBAC Integration (Filament Shield)
+- Use `php artisan shield:generate` to create policies for all resources
+- Override `canAccess()` in resources for row-level security (department/unit scoping)
+- Apply scopes in `getEloquentQuery()` method:
+```php
+public static function getEloquentQuery(): Builder
+{
+    $query = parent::getEloquentQuery();
+    $user = auth()->user();
+
+    if ($user->hasRole('pengarah')) {
+        $query->where('jabatan_kod', $user->jabatan_kod);
+    } elseif ($user->hasRole('ketua-unit')) {
+        $query->where('seksyen_unit_id', $user->seksyen_unit_id);
+    } elseif ($user->hasRole('pic')) {
+        $query->where('pic_id', $user->id);
+    }
+
+    return $query;
+}
+```
+
+### Notifications (Filament Notifications)
+- Use Filament's notification system for in-app alerts
+- Integrate with Laravel notification channels (database, mail, FCM)
+- Display notification count badge in navigation
+- Make notifications clickable with ->url() to navigate to related records
+
+### Actions & Bulk Actions
+Common actions to implement:
+- **Hantar ke PUU** - Mark draft sent to legal advisor
+- **Serah Balik Bon** - Mark bond returned
+- **Jana Laporan PDF** - Generate PDF reports
+- **Eksport Excel** - Export filtered data
+- **Eskalasi Alert** - Manual alert escalation
+
+### Custom Pages
+Create custom pages for:
+- **Executive Dashboard** - Complex visualizations not suited for widgets
+- **Alert Configuration** - Manage alert rules and templates
+- **Laporan Builder** - Custom report generation with parameters
+- **Kalendar Risiko** - Calendar heatmap of critical dates
+
+### API Auto-fill Integration
+Implement in form fields using `afterStateUpdated()`:
+```php
+TextInput::make('no_pendaftaran_pembekal')
+    ->afterStateUpdated(function ($state, $set) {
+        // Call iDaftar API
+        $pembekal = app(IDaftarService::class)->getPembekal($state);
+        $set('nama_pembekal', $pembekal->nama);
+        $set('alamat_pembekal', $pembekal->alamat);
+    })
+    ->live(onBlur: true)
+```
+
+### Alert Engine Integration
+- Schedule command runs daily at 8:00 AM
+- Check all alert rules against database
+- Queue notification jobs for matching records
+- Log to `alert_history` table
+- Send via multiple channels (email, in-app, push)
+- Create Filament notifications for in-app alerts
+
 ## Business Rules
 
 ### Contract Lifecycle
@@ -269,15 +402,18 @@ Implement via Eloquent global scopes based on `jabatan_kod` and `seksyen_unit_id
 
 ### PHP Code
 - Models: PascalCase Malay (e.g., `DaftarSst`, `BonPelaksanaan`)
-- Controllers: PascalCase + Controller suffix (e.g., `DaftarSstController`)
+- Filament Resources: PascalCase + Resource suffix (e.g., `DaftarSstResource`, `BonPelaksanaanResource`)
+- Widgets: PascalCase + Widget suffix (e.g., `KontrakOverviewWidget`, `AlertDashboardWidget`)
 - Methods: camelCase descriptive (e.g., `semakKategoriKontrak()`, `hantarAlert()`)
 - Variables: camelCase (e.g., `$tarikhTamat`, `$nilaiKontrak`)
 - Follow PSR-12 coding standard
 
-### Frontend Components
-- Livewire components: Kebab-case (e.g., `daftar-sst-form`, `alert-notification`)
-- Alpine.js: camelCase for x-data variables
-- CSS classes: Tailwind utilities + custom kebab-case
+### Filament Components
+- Resource names: Plural form (e.g., `DaftarSsts`, `BonPelaksanaans`)
+- Form fields: snake_case matching database columns
+- Table columns: snake_case matching database columns
+- Navigation groups: Malay labels (e.g., 'Pengurusan Kontrak', 'Laporan')
+- Page titles: Malay (e.g., 'Daftar SST', 'Penilaian Prestasi')
 
 ## Color Scheme & Branding
 
@@ -330,21 +466,25 @@ Current manual Excel-based tracking causes:
 
 ```
 app/
+├── Filament/
+│   ├── Resources/       # Filament CRUD resources (DaftarSstResource, BonPelaksanaanResource, etc.)
+│   ├── Pages/           # Custom Filament pages
+│   ├── Widgets/         # Dashboard widgets (KPI cards, charts, Gantt, funnel)
+│   └── RelationManagers/ # Nested resource managers
 ├── Models/              # Eloquent models (DaftarSst, BonPelaksanaan, etc.)
-├── Http/
-│   ├── Controllers/     # Route controllers
-│   ├── Middleware/      # Custom middleware (RBAC scoping)
-│   └── Livewire/        # Livewire components
+├── Policies/            # Authorization policies (integrated with Filament Shield)
 ├── Services/            # Business logic (AlertEngine, NotificationService)
-├── Policies/            # Authorization policies (RBAC enforcement)
-└── Jobs/                # Queue jobs (SendAlertJob, ProcessBondExpiryJob)
+├── Jobs/                # Queue jobs (SendAlertJob, ProcessBondExpiryJob)
+└── Observers/           # Model observers for audit trail
 
 database/
 ├── migrations/          # Schema migrations (28 tables)
 └── seeders/             # Initial data (roles, permissions, master data)
+    └── ShieldSeeder.php # Filament Shield RBAC seeder
 
 resources/
-├── views/               # Blade templates + Livewire views
+├── views/
+│   └── filament/        # Filament custom views (blade components)
 └── js/                  # Alpine.js, Service Worker, FCM
     └── sw.js            # Service Worker for PWA
 
@@ -354,12 +494,13 @@ public/
 └── firebase-messaging-sw.js  # FCM Service Worker
 
 config/
+├── filament.php         # Filament configuration
 ├── permission.php       # Spatie permission config
 ├── auditing.php         # Audit trail config
 └── firebase.php         # FCM configuration
 
 tests/
-├── Feature/             # Feature tests (critical: Alert rules, RBAC)
+├── Feature/             # Feature tests (critical: Alert rules, RBAC, Filament resources)
 └── Unit/                # Unit tests (target: 70% coverage)
 ```
 
