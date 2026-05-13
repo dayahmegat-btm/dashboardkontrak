@@ -23,6 +23,12 @@ class DatabaseSeeder extends Seeder
             JenisBonSeeder::class,
         ]);
 
+        // RBAC Seeders (run after master data, before users)
+        $this->call([
+            RoleSeeder::class,
+            PermissionSeeder::class,
+        ]);
+
         // Uncomment to create test user
         // User::factory()->create([
         //     'name' => 'Test User',
