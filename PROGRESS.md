@@ -1,9 +1,9 @@
 # Project Progress Report
 ## Sistem Pengurusan Kontrak SUK Kedah
 
-**Last Updated:** 14 Mei 2026 (Updated: SST Approval Workflow Complete)
+**Last Updated:** 14 Mei 2026 (Updated: Contract Extension System Complete)
 **Current Phase:** Phase 3 (Week 11) - IN PROGRESS 🚀
-**Overall Progress:** ~76% (Auth Complete, iDaftar Integration Complete, SST Validation & Approval Workflow Complete)
+**Overall Progress:** ~78% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow & Contract Extension Complete)
 
 ---
 
@@ -760,6 +760,130 @@
 - ✅ Application tested, no errors
 - ✅ Cache cleared and components optimized
 
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-043 | Contract Extension System Implementation | ✅ Complete | 14 Mei 2026 |
+
+**TASK-043 Details - Contract Extension System:**
+- ✅ Created lanjutan_tempoh database migration with comprehensive fields:
+  - **Extension Identification:** no_lanjutan (EXT/YYYY/XXXX format), lanjutan_ke (sequence: 1st, 2nd, etc.)
+  - **Original Dates:** tarikh_mula_asal, tarikh_tamat_asal, nilai_kontrak_asal
+  - **New Dates:** tarikh_mula_baru, tarikh_tamat_baru, tempoh_lanjutan_bulan
+  - **Justification:** sebab_lanjutan, justifikasi (detailed explanation)
+  - **Financial Impact:** nilai_tambahan, nilai_kontrak_baru (calculated total)
+  - **Approval Workflow:** submitted_by, approved_by, rejected_by with timestamps and notes
+  - **Document Upload:** fail_surat_lanjutan (extension letter)
+  - **Constraints:** Unique constraint on (daftar_kontrak_id, lanjutan_ke)
+  - Soft deletes, auditing, metadata fields (created_by, updated_by)
+- ✅ Created LanjutanTempoh model with full features:
+  - All fields in fillable array
+  - Date and decimal casts for proper data types
+  - BelongsTo relationships: daftarKontrak, statusKontrak, submittedBy, approvedBy, rejectedBy, createdBy, updatedBy
+  - MorphMany relationships: dokumens, catatans, lampirans (polymorphic)
+  - DaftarSstRelationshipScope for department-based data scoping
+  - Soft deletes and audit trail integration
+- ✅ Updated DaftarKontrak model:
+  - Added lanjutanTempohs() HasMany relationship
+  - Enables querying all extensions for a contract
+- ✅ Updated DaftarSst model:
+  - Added lanjutanTempohs() HasManyThrough relationship (via DaftarKontrak)
+  - Enables querying all extensions for an SST
+- ✅ Created LanjutanTempohResource with comprehensive features:
+  - **6 Organized Form Sections:**
+    1. Maklumat Kontrak Asal - Auto-populates from selected contract
+    2. Tempoh Lanjutan Baru - Reactive date calculations
+    3. Justifikasi Lanjutan - Reason selection with 8 predefined options
+    4. Impak Kewangan - Auto-calculates new contract value
+    5. Dokumen Sokongan - PDF upload (max 10MB)
+    6. Status - Workflow status selector
+  - **Smart Auto-Population:**
+    - Auto-generates extension number (EXT/2026/0001)
+    - Auto-calculates extension sequence (1st, 2nd, 3rd, etc.)
+    - Auto-fills original dates from last extension or base contract
+    - Auto-calculates tarikh_tamat_baru from tarikh_mula + tempoh_bulan
+    - Auto-calculates nilai_kontrak_baru from nilai_asal + nilai_tambahan
+  - **Comprehensive Table with 13+ columns:**
+    - No. Lanjutan (searchable, sortable, copyable)
+    - No. Kontrak (clickable link to contract)
+    - No. SST (toggleable)
+    - Lanjutan Ke (badge, info color)
+    - Tamat Asal vs Tamat Baru (date badges with colors)
+    - Tempoh (months), Nilai Tambahan, Nilai Baru
+    - Status (colored badge), Approval tracking
+  - **Advanced Filters:**
+    - Filter by Status (dropdown)
+    - Filter by Extension Sequence (1st, 2nd, 3rd, 4+)
+    - Filter by Date Range (tamat_dari, tamat_hingga)
+    - Trashed records filter
+  - **Table Actions:** View, Edit, Delete with bulk operations
+  - **Navigation:** Pengurusan Kontrak group, sort order 4
+- ✅ Created ContractExtensionService with 16 comprehensive methods:
+  - **Number Generation & Calculations (5 methods):**
+    - generateExtensionNumber() - Auto-generate EXT/YYYY/XXXX format
+    - getNextExtensionSequence() - Calculate next extension number (1, 2, 3...)
+    - getLatestExtensionDates() - Get most recent dates (handles multiple extensions)
+    - calculateNewEndDate() - Calculate end date from start + months
+    - getTotalExtensionPeriod() - Sum all extension months for a contract
+    - getTotalAdditionalValue() - Sum all additional values
+  - **Workflow Actions (7 methods):**
+    - submitForApproval() - Submit extension with validation
+    - markAsUnderReview() - Mark as under review by approver
+    - approve() - Approve extension with optional notes
+    - reject() - Reject extension with mandatory reason
+    - returnToDraft() - Return rejected extension to draft
+    - activate() - Activate extension and update parent contract dates/values
+  - **Permission Checks (4 methods):**
+    - canApprove() - super-admin, admin, pengarah, sk-exec
+    - canReject() - super-admin, admin, pengarah, sk-exec
+    - canSubmit() - pic, ketua-unit, and above
+    - canActivate() - super-admin, admin, sk-exec only
+  - **Helper Methods (3 methods):**
+    - validateForSubmission() - Comprehensive validation (dates, values, required fields)
+    - getApprovalStatusBadge() - Badge configuration with colors and icons
+    - getApprovalHistory() - Chronological approval history
+    - getExtensionSummary() - Contract extension summary (total extensions, months, values)
+  - **Service Features:**
+    - Database transactions for data integrity
+    - Comprehensive error handling and logging
+    - Malay language messages
+    - Contract date/value updates on activation
+- ✅ Enhanced ViewLanjutanTempoh page with approval workflow:
+  - **5 Header Actions:**
+    - Submit for Approval (DERAF → HANTAR)
+    - Approve (HANTAR/SEMAK → LULUS)
+    - Reject (HANTAR/SEMAK → TOLAK)
+    - Activate (LULUS → AKTIF) - Updates parent contract
+    - Return to Draft (TOLAK → DERAF)
+  - **Comprehensive Infolist with 6 sections:**
+    1. Maklumat Kontrak - Contract details with clickable links
+    2. Maklumat Lanjutan - Original vs new dates comparison
+    3. Impak Kewangan - Financial impact display
+    4. Justifikasi - Reason and detailed justification
+    5. Maklumat Kelulusan - Full approval history with timeline
+    6. Dokumen - Extension letter document link
+  - **Visual Features:**
+    - Color-coded badges (success for new dates, danger for old dates)
+    - Icons for all fields (calendar, dollar, user, etc.)
+    - Conditional visibility based on status
+    - Markdown support for notes/justification
+    - Responsive 2-column layout
+- ✅ Extension workflow state transitions:
+  - DERAF → HANTAR (submit for approval)
+  - HANTAR → SEMAK (mark under review)
+  - HANTAR/SEMAK → LULUS (approve)
+  - HANTAR/SEMAK → TOLAK (reject)
+  - TOLAK → DERAF (return for revision)
+  - LULUS → AKTIF (activate and update contract)
+- ✅ Contract update on extension activation:
+  - tarikh_tamat updated to extension's tarikh_tamat_baru
+  - nilai_kontrak updated to extension's nilai_kontrak_baru
+  - tempoh_bulan recalculated from original start to new end date
+  - All updates wrapped in database transaction
+- ✅ Migration executed successfully, table created
+- ✅ Models and relationships tested
+- ✅ Caches cleared and Filament optimized
+- ✅ No diagnostics errors
+
 #### Completed Early from Phase 3:
 - ✅ TASK-035: SST Models & Relationships (completed in Phase 1)
 - ✅ TASK-037 to TASK-040: SST Filament Resource (completed in Phase 1)
@@ -767,7 +891,8 @@
 #### Remaining Phase 3 Tasks:
 - ✅ TASK-041: SST Validation & Business Logic (COMPLETED)
 - ✅ TASK-042: SST Approval Workflow (COMPLETED)
-- ⏳ TASK-043 to TASK-045: SST Extensions & Contract Extensions
+- ✅ TASK-043: Contract Extension System (COMPLETED)
+- ⏳ TASK-044 to TASK-045: SST Extensions (Lanjutan SST direct extensions)
 - ⏳ TASK-046 to TASK-050: Daftar Kontrak Module Enhancements
 - ⏳ TASK-051 to TASK-053: Document Management (Lampiran Dokumen)
 - ⏳ TASK-054: Sprint 2 Demo
