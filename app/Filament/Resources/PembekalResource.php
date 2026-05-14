@@ -14,6 +14,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class PembekalResource extends Resource
 {
@@ -209,6 +212,83 @@ class PembekalResource extends Resource
                     ->placeholder('Semua')
                     ->trueLabel('Aktif sahaja')
                     ->falseLabel('Tidak aktif sahaja'),
+
+                Tables\Filters\Filter::make('bilangan_sst')
+                    ->form([
+                        Forms\Components\TextInput::make('sst_min')
+                            ->label('Min. Bilangan SST')
+                            ->numeric()
+                            ->minValue(0),
+                        Forms\Components\TextInput::make('sst_max')
+                            ->label('Max. Bilangan SST')
+                            ->numeric()
+                            ->minValue(0),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['sst_min'] !== null,
+                                fn (Builder $query): Builder => $query->has('daftarSsts', '>=', (int)$data['sst_min']),
+                            )
+                            ->when(
+                                $data['sst_max'] !== null,
+                                fn (Builder $query): Builder => $query->has('daftarSsts', '<=', (int)$data['sst_max']),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if (($data['sst_min'] ?? null) !== null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Min. SST: ' . $data['sst_min'])
+                                ->removeField('sst_min');
+                        }
+                        if (($data['sst_max'] ?? null) !== null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Max. SST: ' . $data['sst_max'])
+                                ->removeField('sst_max');
+                        }
+                        return $indicators;
+                    }),
+
+                Tables\Filters\TernaryFilter::make('has_pic')
+                    ->label('Maklumat PIC')
+                    ->placeholder('Semua Pembekal')
+                    ->trueLabel('Ada Maklumat PIC')
+                    ->falseLabel('Tiada Maklumat PIC')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('pic_nama')->where('pic_nama', '!=', ''),
+                        false: fn (Builder $query) => $query->where(function ($q) {
+                            $q->whereNull('pic_nama')->orWhere('pic_nama', '=', '');
+                        }),
+                    ),
+
+                Tables\Filters\TernaryFilter::make('has_contact')
+                    ->label('Maklumat Hubungan')
+                    ->placeholder('Semua Pembekal')
+                    ->trueLabel('Ada No. Telefon/Emel')
+                    ->falseLabel('Tiada No. Telefon & Emel')
+                    ->queries(
+                        true: fn (Builder $query) => $query->where(function ($q) {
+                            $q->whereNotNull('no_telefon')->where('no_telefon', '!=', '')
+                                ->orWhereNotNull('emel')->where('emel', '!=', '');
+                        }),
+                        false: fn (Builder $query) => $query->where(function ($q) {
+                            $q->where(function ($subQ) {
+                                $subQ->whereNull('no_telefon')->orWhere('no_telefon', '=', '');
+                            })->where(function ($subQ) {
+                                $subQ->whereNull('emel')->orWhere('emel', '=', '');
+                            });
+                        }),
+                    ),
+
+                Tables\Filters\TernaryFilter::make('has_sst')
+                    ->label('Status SST')
+                    ->placeholder('Semua Pembekal')
+                    ->trueLabel('Ada SST Aktif')
+                    ->falseLabel('Tiada SST')
+                    ->queries(
+                        true: fn (Builder $query) => $query->has('daftarSsts', '>', 0),
+                        false: fn (Builder $query) => $query->doesntHave('daftarSsts'),
+                    ),
+
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -261,6 +341,31 @@ class PembekalResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-pembekal-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('nama_syarikat')->heading('Nama Syarikat'),
+                                    Column::make('no_pendaftaran')->heading('No. Pendaftaran SSM'),
+                                    Column::make('alamat')->heading('Alamat'),
+                                    Column::make('no_telefon')->heading('No. Telefon'),
+                                    Column::make('emel')->heading('Emel'),
+                                    Column::make('pic_nama')->heading('Nama PIC'),
+                                    Column::make('pic_telefon')->heading('Telefon PIC'),
+                                    Column::make('pic_emel')->heading('Emel PIC'),
+                                    Column::make('daftar_ssts_count')->heading('Bilangan SST'),
+                                    Column::make('is_active')->heading('Status Aktif')
+                                        ->formatStateUsing(fn ($state) => $state ? 'Aktif' : 'Tidak Aktif'),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                    Column::make('updated_at')->heading('Tarikh Kemaskini')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                    Column::make('deleted_at')->heading('Tarikh Dipadam')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

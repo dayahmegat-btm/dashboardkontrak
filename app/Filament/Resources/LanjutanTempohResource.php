@@ -16,6 +16,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class LanjutanTempohResource extends Resource
 {
@@ -369,7 +372,106 @@ class LanjutanTempohResource extends Resource
                         return $query
                             ->when($data['tamat_dari'], fn ($q) => $q->whereDate('tarikh_tamat_baru', '>=', $data['tamat_dari']))
                             ->when($data['tamat_hingga'], fn ($q) => $q->whereDate('tarikh_tamat_baru', '<=', $data['tamat_hingga']));
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['tamat_dari'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Tamat dari: ' . \Carbon\Carbon::parse($data['tamat_dari'])->format('d/m/Y'))
+                                ->removeField('tamat_dari');
+                        }
+                        if ($data['tamat_hingga'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Tamat hingga: ' . \Carbon\Carbon::parse($data['tamat_hingga'])->format('d/m/Y'))
+                                ->removeField('tamat_hingga');
+                        }
+                        return $indicators;
                     }),
+
+                Tables\Filters\SelectFilter::make('sebab_lanjutan')
+                    ->label('Sebab Lanjutan')
+                    ->options([
+                        'Kelewatan Projek' => 'Kelewatan Projek',
+                        'Tambahan Skop Kerja' => 'Tambahan Skop Kerja',
+                        'Perubahan Spesifikasi' => 'Perubahan Spesifikasi',
+                        'Keadaan Cuaca' => 'Keadaan Cuaca',
+                        'Force Majeure' => 'Force Majeure',
+                        'Perubahan Polisi' => 'Perubahan Polisi',
+                        'Kelulusan Lambat' => 'Kelulusan Lambat',
+                        'Lain-lain' => 'Lain-lain',
+                    ])
+                    ->multiple(),
+
+                Tables\Filters\Filter::make('nilai_tambahan')
+                    ->form([
+                        Forms\Components\TextInput::make('nilai_min')
+                            ->label('Nilai Tambahan Min (RM)')
+                            ->numeric()
+                            ->prefix('RM'),
+                        Forms\Components\TextInput::make('nilai_max')
+                            ->label('Nilai Tambahan Max (RM)')
+                            ->numeric()
+                            ->prefix('RM'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['nilai_min'],
+                                fn (Builder $query, $nilai): Builder => $query->where('nilai_tambahan', '>=', $nilai),
+                            )
+                            ->when(
+                                $data['nilai_max'],
+                                fn (Builder $query, $nilai): Builder => $query->where('nilai_tambahan', '<=', $nilai),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['nilai_min'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Nilai tambahan min: RM ' . number_format($data['nilai_min'], 2))
+                                ->removeField('nilai_min');
+                        }
+                        if ($data['nilai_max'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Nilai tambahan max: RM ' . number_format($data['nilai_max'], 2))
+                                ->removeField('nilai_max');
+                        }
+                        return $indicators;
+                    }),
+
+                Tables\Filters\Filter::make('tahun')
+                    ->form([
+                        Forms\Components\Select::make('tahun')
+                            ->label('Tahun')
+                            ->options(function () {
+                                $currentYear = date('Y');
+                                $years = [];
+                                for ($i = $currentYear - 5; $i <= $currentYear + 1; $i++) {
+                                    $years[$i] = $i;
+                                }
+                                return $years;
+                            })
+                            ->placeholder('Pilih Tahun'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['tahun'],
+                            fn (Builder $query, $year): Builder => $query->whereYear('created_at', $year),
+                        );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        if (!($data['tahun'] ?? null)) {
+                            return [];
+                        }
+                        return [Tables\Filters\Indicator::make('Tahun: ' . $data['tahun'])
+                            ->removeField('tahun')];
+                    }),
+
+                Tables\Filters\TernaryFilter::make('ada_nilai_tambahan')
+                    ->label('Nilai Tambahan')
+                    ->placeholder('Semua Lanjutan')
+                    ->trueLabel('Ada Nilai Tambahan (>RM 0)')
+                    ->falseLabel('Tiada Nilai Tambahan (RM 0)')
+                    ->queries(
+                        true: fn (Builder $query) => $query->where('nilai_tambahan', '>', 0),
+                        false: fn (Builder $query) => $query->where('nilai_tambahan', '=', 0),
+                    ),
 
                 Tables\Filters\TrashedFilter::make(),
             ])
@@ -380,6 +482,48 @@ class LanjutanTempohResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-lanjutan-tempoh-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('no_lanjutan')->heading('No. Lanjutan'),
+                                    Column::make('daftarKontrak.no_kontrak')->heading('No. Kontrak'),
+                                    Column::make('daftarKontrak.daftarSst.no_sst')->heading('No. SST'),
+                                    Column::make('daftarKontrak.daftarSst.pembekal.nama_syarikat')->heading('Nama Pembekal'),
+                                    Column::make('lanjutan_ke')->heading('Lanjutan Ke'),
+                                    Column::make('tarikh_mula_asal')->heading('Tarikh Mula Asal')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_tamat_asal')->heading('Tarikh Tamat Asal')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_mula_baru')->heading('Tarikh Mula Baru')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_tamat_baru')->heading('Tarikh Tamat Baru')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tempoh_lanjutan_bulan')->heading('Tempoh Lanjutan (Bulan)'),
+                                    Column::make('nilai_kontrak_asal')->heading('Nilai Kontrak Asal (RM)')
+                                        ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('nilai_tambahan')->heading('Nilai Tambahan (RM)')
+                                        ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('nilai_kontrak_baru')->heading('Nilai Kontrak Baru (RM)')
+                                        ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('sebab_lanjutan')->heading('Sebab Lanjutan'),
+                                    Column::make('justifikasi')->heading('Justifikasi'),
+                                    Column::make('statusKontrak.nama')->heading('Status'),
+                                    Column::make('fail_surat_lanjutan')->heading('Ada Dokumen')
+                                        ->formatStateUsing(fn ($state) => $state ? 'Ya' : 'Tidak'),
+                                    Column::make('submittedBy.name')->heading('Dihantar Oleh'),
+                                    Column::make('submitted_at')->heading('Tarikh Hantar')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                    Column::make('approvedBy.name')->heading('Diluluskan Oleh'),
+                                    Column::make('approved_at')->heading('Tarikh Lulus')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                    Column::make('daftarKontrak.daftarSst.jabatan.nama_jabatan')->heading('Jabatan'),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

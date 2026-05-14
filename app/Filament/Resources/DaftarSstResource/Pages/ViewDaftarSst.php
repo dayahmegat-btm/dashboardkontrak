@@ -210,6 +210,35 @@ class ViewDaftarSst extends ViewRecord
                     ->visible(fn ($record) =>
                         in_array($record->statusKontrak->kod, ['HANTAR', 'SEMAK', 'LULUS', 'TOLAK', 'AKTIF'])
                     ),
+
+                Infolists\Components\Section::make('Maklumat Lanjutan Tempoh')
+                    ->description('Tarikh lanjutan kontrak (jika ada)')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('tarikh_tamat')
+                            ->label('Tarikh Tamat Asal')
+                            ->date('d/m/Y')
+                            ->icon('heroicon-o-calendar')
+                            ->color('danger'),
+                        Infolists\Components\TextEntry::make('tarikh_lanjutan_1')
+                            ->label('Tarikh Lanjutan 1')
+                            ->date('d/m/Y')
+                            ->icon('heroicon-o-calendar')
+                            ->color('info')
+                            ->default('—')
+                            ->visible(fn ($record) => !empty($record->tarikh_lanjutan_1)),
+                        Infolists\Components\TextEntry::make('tarikh_lanjutan_2')
+                            ->label('Tarikh Lanjutan 2')
+                            ->date('d/m/Y')
+                            ->icon('heroicon-o-calendar')
+                            ->color('success')
+                            ->default('—')
+                            ->visible(fn ($record) => !empty($record->tarikh_lanjutan_2)),
+                    ])
+                    ->columns(3)
+                    ->visible(fn ($record) =>
+                        !empty($record->tarikh_lanjutan_1) || !empty($record->tarikh_lanjutan_2)
+                    )
+                    ->collapsed(),
             ]);
     }
 }

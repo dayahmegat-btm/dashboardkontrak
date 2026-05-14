@@ -12,6 +12,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class BonPelaksanaanResource extends Resource
 {
@@ -209,6 +212,54 @@ class BonPelaksanaanResource extends Resource
                         'dibatalkan' => 'Dibatalkan',
                         'diserahkan' => 'Diserahkan Balik',
                     ]),
+                Tables\Filters\Filter::make('tarikh_tamat')
+                    ->form([
+                        Forms\Components\DatePicker::make('tarikh_tamat_dari')
+                            ->label('Tamat Dari Tarikh'),
+                        Forms\Components\DatePicker::make('tarikh_tamat_hingga')
+                            ->label('Tamat Hingga Tarikh'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['tarikh_tamat_dari'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_tamat', '>=', $date),
+                            )
+                            ->when(
+                                $data['tarikh_tamat_hingga'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_tamat', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['tarikh_tamat_dari'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Tamat dari: ' . \Carbon\Carbon::parse($data['tarikh_tamat_dari'])->format('d/m/Y'))
+                                ->removeField('tarikh_tamat_dari');
+                        }
+                        if ($data['tarikh_tamat_hingga'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Tamat hingga: ' . \Carbon\Carbon::parse($data['tarikh_tamat_hingga'])->format('d/m/Y'))
+                                ->removeField('tarikh_tamat_hingga');
+                        }
+                        return $indicators;
+                    }),
+                Tables\Filters\TernaryFilter::make('akan_tamat')
+                    ->label('Akan Tamat')
+                    ->placeholder('Semua Bon')
+                    ->trueLabel('Akan Tamat (≤90 hari)')
+                    ->falseLabel('Masih Lama (>90 hari)')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereRaw('DATEDIFF(tarikh_tamat, CURDATE()) <= 90 AND DATEDIFF(tarikh_tamat, CURDATE()) >= 0'),
+                        false: fn (Builder $query) => $query->whereRaw('DATEDIFF(tarikh_tamat, CURDATE()) > 90'),
+                    ),
+                Tables\Filters\TernaryFilter::make('kritikal')
+                    ->label('Status Kritikal')
+                    ->placeholder('Semua Bon')
+                    ->trueLabel('Kritikal (≤7 hari)')
+                    ->falseLabel('Tidak Kritikal')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereRaw('DATEDIFF(tarikh_tamat, CURDATE()) <= 7 AND DATEDIFF(tarikh_tamat, CURDATE()) >= 0'),
+                        false: fn (Builder $query) => $query->whereRaw('DATEDIFF(tarikh_tamat, CURDATE()) > 7 OR DATEDIFF(tarikh_tamat, CURDATE()) < 0'),
+                    ),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -218,6 +269,34 @@ class BonPelaksanaanResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-bon-pelaksanaan-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('no_bon')->heading('No. Bon'),
+                                    Column::make('daftarKontrak.no_kontrak')->heading('No. Kontrak'),
+                                    Column::make('daftarKontrak.daftarSst.no_sst')->heading('No. SST'),
+                                    Column::make('jenisBon.nama')->heading('Jenis Bon'),
+                                    Column::make('nilai_bon')->heading('Nilai Bon (RM)')
+                                        ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('institusi_penjamin')->heading('Institusi Penjamin'),
+                                    Column::make('tarikh_mula')->heading('Tarikh Mula')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_tamat')->heading('Tarikh Tamat')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('hari_sehingga_tamat')->heading('Hari Sehingga Tamat'),
+                                    Column::make('status')->heading('Status')
+                                        ->formatStateUsing(fn ($state) => ucfirst($state)),
+                                    Column::make('fail_bon_path')->heading('Ada Dokumen')
+                                        ->formatStateUsing(fn ($state) => $state ? 'Ya' : 'Tidak'),
+                                    Column::make('daftarKontrak.daftarSst.jabatan.nama_jabatan')->heading('Jabatan'),
+                                    Column::make('daftarKontrak.daftarSst.pegawaiPengawal.name')->heading('Pegawai Pengawal'),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

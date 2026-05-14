@@ -12,6 +12,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class AduanResource extends Resource
 {
@@ -269,7 +272,8 @@ class AduanResource extends Resource
                         'peralatan_rosak' => 'Peralatan Rosak',
                         'kebersihan' => 'Kebersihan',
                         'lain_lain' => 'Lain-lain',
-                    ]),
+                    ])
+                    ->multiple(),
                 Tables\Filters\SelectFilter::make('keutamaan')
                     ->label('Keutamaan')
                     ->options([
@@ -277,7 +281,8 @@ class AduanResource extends Resource
                         'tinggi' => 'Tinggi',
                         'sederhana' => 'Sederhana',
                         'rendah' => 'Rendah',
-                    ]),
+                    ])
+                    ->multiple(),
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
@@ -287,7 +292,38 @@ class AduanResource extends Resource
                         'selesai' => 'Selesai',
                         'ditutup' => 'Ditutup',
                         'dibatalkan' => 'Dibatalkan',
-                    ]),
+                    ])
+                    ->multiple(),
+                Tables\Filters\Filter::make('tarikh_aduan')
+                    ->form([
+                        Forms\Components\DatePicker::make('tarikh_dari')
+                            ->label('Dari Tarikh'),
+                        Forms\Components\DatePicker::make('tarikh_hingga')
+                            ->label('Hingga Tarikh'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['tarikh_dari'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_aduan', '>=', $date),
+                            )
+                            ->when(
+                                $data['tarikh_hingga'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_aduan', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['tarikh_dari'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Dari: ' . \Carbon\Carbon::parse($data['tarikh_dari'])->format('d/m/Y'))
+                                ->removeField('tarikh_dari');
+                        }
+                        if ($data['tarikh_hingga'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Hingga: ' . \Carbon\Carbon::parse($data['tarikh_hingga'])->format('d/m/Y'))
+                                ->removeField('tarikh_hingga');
+                        }
+                        return $indicators;
+                    }),
                 Tables\Filters\Filter::make('belum_selesai')
                     ->label('Belum Selesai')
                     ->query(fn (Builder $query): Builder =>
@@ -307,6 +343,39 @@ class AduanResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-aduan-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('no_aduan')->heading('No. Aduan'),
+                                    Column::make('daftarKontrak.no_kontrak')->heading('No. Kontrak'),
+                                    Column::make('daftarKontrak.daftarSst.no_sst')->heading('No. SST'),
+                                    Column::make('daftarKontrak.daftarSst.pembekal.nama_syarikat')->heading('Nama Pembekal'),
+                                    Column::make('tarikh_aduan')->heading('Tarikh Aduan')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tajuk')->heading('Tajuk'),
+                                    Column::make('penerangan')->heading('Penerangan'),
+                                    Column::make('kategori')->heading('Kategori')
+                                        ->formatStateUsing(fn ($state) => str_replace('_', ' ', ucwords($state, '_'))),
+                                    Column::make('keutamaan')->heading('Keutamaan')
+                                        ->formatStateUsing(fn ($state) => ucfirst($state)),
+                                    Column::make('status')->heading('Status')
+                                        ->formatStateUsing(fn ($state) => str_replace('_', ' ', ucwords($state, '_'))),
+                                    Column::make('pengadu_nama')->heading('Nama Pengadu'),
+                                    Column::make('pengadu_jabatan')->heading('Jabatan Pengadu'),
+                                    Column::make('pengadu_telefon')->heading('Telefon Pengadu'),
+                                    Column::make('pengadu_emel')->heading('E-mel Pengadu'),
+                                    Column::make('tindakan_diambil')->heading('Tindakan Diambil'),
+                                    Column::make('tarikh_tindakan')->heading('Tarikh Tindakan')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_selesai')->heading('Tarikh Selesai')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

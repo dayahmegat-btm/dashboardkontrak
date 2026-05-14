@@ -18,6 +18,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class DaftarSstResource extends Resource
 {
@@ -186,6 +189,46 @@ class DaftarSstResource extends Resource
                                     $get('tempoh_bulan')
                                 )
                             ]),
+                        Forms\Components\DatePicker::make('tarikh_lanjutan_1')
+                            ->label('Tarikh Lanjutan 1')
+                            ->displayFormat('d/m/Y')
+                            ->helperText('Opsional: Tarikh tamat selepas lanjutan pertama')
+                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                // Clear tarikh_lanjutan_2 if tarikh_lanjutan_1 is empty
+                                if (empty($state) && !empty($get('tarikh_lanjutan_2'))) {
+                                    $set('tarikh_lanjutan_2', null);
+                                }
+                            })
+                            ->reactive()
+                            ->rule(function (callable $get) {
+                                return function ($attribute, $value, $fail) use ($get) {
+                                    if ($value && $get('tarikh_tamat')) {
+                                        $tarikhTamat = \Carbon\Carbon::parse($get('tarikh_tamat'));
+                                        $tarikhLanjutan1 = \Carbon\Carbon::parse($value);
+
+                                        if ($tarikhLanjutan1 <= $tarikhTamat) {
+                                            $fail('Tarikh Lanjutan 1 mestilah selepas Tarikh Tamat.');
+                                        }
+                                    }
+                                };
+                            }),
+                        Forms\Components\DatePicker::make('tarikh_lanjutan_2')
+                            ->label('Tarikh Lanjutan 2')
+                            ->displayFormat('d/m/Y')
+                            ->helperText('Opsional: Tarikh tamat selepas lanjutan kedua')
+                            ->disabled(fn (callable $get) => empty($get('tarikh_lanjutan_1')))
+                            ->rule(function (callable $get) {
+                                return function ($attribute, $value, $fail) use ($get) {
+                                    if ($value && $get('tarikh_lanjutan_1')) {
+                                        $tarikhLanjutan1 = \Carbon\Carbon::parse($get('tarikh_lanjutan_1'));
+                                        $tarikhLanjutan2 = \Carbon\Carbon::parse($value);
+
+                                        if ($tarikhLanjutan2 <= $tarikhLanjutan1) {
+                                            $fail('Tarikh Lanjutan 2 mestilah selepas Tarikh Lanjutan 1.');
+                                        }
+                                    }
+                                };
+                            }),
                     ])
                     ->columns(3),
 
@@ -321,6 +364,22 @@ class DaftarSstResource extends Resource
                     ->label('Tarikh Tamat')
                     ->date('d/m/Y')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('tarikh_lanjutan_1')
+                    ->label('Lanjutan 1')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('info'),
+                Tables\Columns\TextColumn::make('tarikh_lanjutan_2')
+                    ->label('Lanjutan 2')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('success'),
                 Tables\Columns\TextColumn::make('hari_sehingga_tamat')
                     ->label('Hari Lagi')
                     ->sortable()
@@ -337,14 +396,37 @@ class DaftarSstResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_kategori_1')
-                    ->label('Kat. 1')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\IconColumn::make('is_kategori_2')
-                    ->label('Kat. 2')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('kategori_risiko')
+                    ->label('Kategori Risiko')
+                    ->badge()
+                    ->state(function ($record): ?string {
+                        if ($record->is_kategori_1 && $record->is_kategori_2) {
+                            return 'Kategori 1 & 2';
+                        } elseif ($record->is_kategori_1) {
+                            return 'Kategori 1';
+                        } elseif ($record->is_kategori_2) {
+                            return 'Kategori 2';
+                        }
+                        return null;
+                    })
+                    ->color(function ($record): string {
+                        if ($record->is_kategori_1 || $record->is_kategori_2) {
+                            return 'danger';
+                        }
+                        return 'gray';
+                    })
+                    ->icon(function ($record): ?string {
+                        if ($record->is_kategori_1 || $record->is_kategori_2) {
+                            return 'heroicon-o-exclamation-triangle';
+                        }
+                        return null;
+                    })
+                    ->placeholder('—')
+                    ->sortable(query: function ($query, string $direction): void {
+                        // Sort by highest priority first (both categories, then single categories)
+                        $query->orderByRaw('(is_kategori_1 + is_kategori_2) ' . $direction);
+                    })
+                    ->searchable(false),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dicipta')
                     ->dateTime('d/m/Y H:i')
@@ -377,6 +459,13 @@ class DaftarSstResource extends Resource
                     ->placeholder('Semua')
                     ->trueLabel('Ya')
                     ->falseLabel('Tidak'),
+                Tables\Filters\Filter::make('high_risk')
+                    ->label('Risiko Tinggi (Mana-mana Kategori)')
+                    ->toggle()
+                    ->query(fn ($query) => $query->where(function ($q) {
+                        $q->where('is_kategori_1', true)
+                          ->orWhere('is_kategori_2', true);
+                    })),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -505,6 +594,31 @@ class DaftarSstResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-sst-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('no_sst')->heading('No. SST'),
+                                    Column::make('tajuk')->heading('Tajuk'),
+                                    Column::make('jabatan.nama_jabatan')->heading('Jabatan'),
+                                    Column::make('seksyenUnit.nama_unit')->heading('Seksyen/Unit'),
+                                    Column::make('pembekal.nama_syarikat')->heading('Pembekal'),
+                                    Column::make('nilai_kontrak')->heading('Nilai Kontrak (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('nilai_komitmen')->heading('Nilai Komitmen (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('baki_kontrak')->heading('Baki (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('tarikh_mula')->heading('Tarikh Mula')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tarikh_tamat')->heading('Tarikh Tamat')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('hari_sehingga_tamat')->heading('Hari Sehingga Tamat'),
+                                    Column::make('statusKontrak.nama')->heading('Status'),
+                                    Column::make('is_kategori_1')->heading('Kategori 1')->formatStateUsing(fn ($state) => $state ? 'Ya' : 'Tidak'),
+                                    Column::make('is_kategori_2')->heading('Kategori 2')->formatStateUsing(fn ($state) => $state ? 'Ya' : 'Tidak'),
+                                    Column::make('pegawai_pengawal')->heading('Pegawai Pengawal'),
+                                    Column::make('pegawai_penyelia')->heading('Pegawai Penyelia'),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

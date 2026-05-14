@@ -12,6 +12,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class PenilaianPrestasiResource extends Resource
 {
@@ -304,12 +307,69 @@ class PenilaianPrestasiResource extends Resource
                         'D' => 'D (60-69)',
                         'E' => 'E (<60)',
                     ]),
+                Tables\Filters\Filter::make('tarikh_penilaian')
+                    ->form([
+                        Forms\Components\DatePicker::make('tarikh_dari')
+                            ->label('Dari Tarikh'),
+                        Forms\Components\DatePicker::make('tarikh_hingga')
+                            ->label('Hingga Tarikh'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['tarikh_dari'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_penilaian', '>=', $date),
+                            )
+                            ->when(
+                                $data['tarikh_hingga'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tarikh_penilaian', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['tarikh_dari'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Dari: ' . \Carbon\Carbon::parse($data['tarikh_dari'])->format('d/m/Y'))
+                                ->removeField('tarikh_dari');
+                        }
+                        if ($data['tarikh_hingga'] ?? null) {
+                            $indicators[] = Tables\Filters\Indicator::make('Hingga: ' . \Carbon\Carbon::parse($data['tarikh_hingga'])->format('d/m/Y'))
+                                ->removeField('tarikh_hingga');
+                        }
+                        return $indicators;
+                    }),
                 Tables\Filters\Filter::make('skor_tinggi')
                     ->label('Skor Tinggi (≥80)')
                     ->query(fn (Builder $query): Builder => $query->where('skor_keseluruhan', '>=', 80)),
                 Tables\Filters\Filter::make('skor_rendah')
                     ->label('Skor Rendah (<60)')
                     ->query(fn (Builder $query): Builder => $query->where('skor_keseluruhan', '<', 60)),
+                Tables\Filters\Filter::make('tahun')
+                    ->form([
+                        Forms\Components\Select::make('tahun')
+                            ->label('Tahun')
+                            ->options(function () {
+                                $currentYear = date('Y');
+                                $years = [];
+                                for ($i = $currentYear - 5; $i <= $currentYear + 1; $i++) {
+                                    $years[$i] = $i;
+                                }
+                                return $years;
+                            })
+                            ->placeholder('Pilih Tahun'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['tahun'],
+                            fn (Builder $query, $year): Builder => $query->whereYear('tarikh_penilaian', $year),
+                        );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        if (!($data['tahun'] ?? null)) {
+                            return [];
+                        }
+                        return [Tables\Filters\Indicator::make('Tahun: ' . $data['tahun'])
+                            ->removeField('tahun')];
+                    }),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -319,6 +379,35 @@ class PenilaianPrestasiResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exports([
+                            ExcelExport::make()
+                                ->fromTable()
+                                ->withFilename(fn () => 'laporan-penilaian-prestasi-' . date('Y-m-d'))
+                                ->withColumns([
+                                    Column::make('daftarKontrak.no_kontrak')->heading('No. Kontrak'),
+                                    Column::make('daftarKontrak.daftarSst.no_sst')->heading('No. SST'),
+                                    Column::make('daftarKontrak.daftarSst.pembekal.nama_syarikat')->heading('Nama Pembekal'),
+                                    Column::make('tarikh_penilaian')->heading('Tarikh Penilaian')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
+                                    Column::make('tempoh_penilaian')->heading('Tempoh Penilaian'),
+                                    Column::make('skor_kualiti')->heading('Skor Kualiti'),
+                                    Column::make('skor_masa')->heading('Skor Masa'),
+                                    Column::make('skor_kos')->heading('Skor Kos'),
+                                    Column::make('skor_keselamatan')->heading('Skor Keselamatan'),
+                                    Column::make('skor_keseluruhan')->heading('Skor Keseluruhan')
+                                        ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('gred')->heading('Gred'),
+                                    Column::make('ulasan')->heading('Ulasan'),
+                                    Column::make('cadangan_penambahbaikan')->heading('Cadangan Penambahbaikan'),
+                                    Column::make('dinilai_oleh')->heading('Dinilai Oleh'),
+                                    Column::make('jawatan_penilai')->heading('Jawatan Penilai'),
+                                    Column::make('fail_penilaian_path')->heading('Ada Dokumen')
+                                        ->formatStateUsing(fn ($state) => $state ? 'Ya' : 'Tidak'),
+                                    Column::make('created_at')->heading('Tarikh Dicipta')
+                                        ->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y H:i') : ''),
+                                ])
+                        ]),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),

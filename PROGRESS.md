@@ -1,9 +1,9 @@
 # Project Progress Report
 ## Sistem Pengurusan Kontrak SUK Kedah
 
-**Last Updated:** 14 Mei 2026 (Updated: Contract Extension System Complete)
+**Last Updated:** 14 Mei 2026 (Updated: Workflow Tracking, Kategori Auto-calculation, Advanced Filters & Excel Export Complete)
 **Current Phase:** Phase 3 (Week 11) - IN PROGRESS 🚀
-**Overall Progress:** ~78% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow & Contract Extension Complete)
+**Overall Progress:** ~85% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow, Contract Extensions, Workflow Tracking, Kategori System & Excel Export Complete)
 
 ---
 
@@ -884,17 +884,331 @@
 - ✅ Caches cleared and Filament optimized
 - ✅ No diagnostics errors
 
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-044 | SST & Kontrak Extension Date Fields | ✅ Complete | 14 Mei 2026 |
+
+**TASK-044 Details - SST & Kontrak Extension Date Fields:**
+- ✅ Added tarikh_lanjutan_1 and tarikh_lanjutan_2 to daftar_sst table:
+  - Date fields for tracking simple extension dates
+  - Nullable fields positioned after tarikh_tamat
+  - Includes down() migration for rollback
+  - Migration executed successfully
+- ✅ Added tarikh_lanjutan_1 and tarikh_lanjutan_2 to daftar_kontrak table:
+  - Same structure as daftar_sst
+  - Allows tracking extensions at contract level
+  - Migration executed successfully
+- ✅ Updated DaftarSst model:
+  - Added fields to fillable array
+  - Added date casts for proper Carbon handling
+- ✅ Updated DaftarKontrak model:
+  - Added fields to fillable array
+  - Added date casts for proper Carbon handling
+- ✅ Enhanced DaftarSstResource form:
+  - Added 2 new DatePicker fields after tarikh_tamat
+  - Helper text explaining purpose
+  - Reactive validation: Lanjutan 1 must be after Tamat
+  - Reactive validation: Lanjutan 2 must be after Lanjutan 1
+  - Auto-clear Lanjutan 2 if Lanjutan 1 is cleared
+  - Lanjutan 2 disabled if Lanjutan 1 is empty
+  - Malay error messages
+- ✅ Enhanced DaftarSstResource table:
+  - Added 2 columns for extension dates
+  - Sortable, toggleable (hidden by default)
+  - Badge display with color coding (info for Lanjutan 1, success for Lanjutan 2)
+  - Placeholder '—' for empty dates
+- ✅ Enhanced ViewDaftarSst infolist:
+  - Added "Maklumat Lanjutan Tempoh" section
+  - Shows original tarikh_tamat in red
+  - Shows Lanjutan 1 in blue (if exists)
+  - Shows Lanjutan 2 in green (if exists)
+  - 3-column layout with icons
+  - Section collapsed by default
+  - Only visible if at least one extension date exists
+- ✅ Enhanced DaftarKontrakResource form:
+  - Same DatePicker fields as DaftarSst
+  - Same validation rules and reactive behavior
+  - Consistent UX across SST and Kontrak
+- ✅ Enhanced DaftarKontrakResource table:
+  - Same column configuration as DaftarSst
+  - Badge display with color coding
+  - Toggleable, hidden by default
+- ✅ Validation features:
+  - Sequential validation (Lanjutan 1 > Tamat, Lanjutan 2 > Lanjutan 1)
+  - Reactive field disabling (Lanjutan 2 disabled until Lanjutan 1 filled)
+  - Auto-clearing dependent fields
+  - Malay language error messages
+- ✅ All migrations executed successfully
+- ✅ No diagnostics errors
+- ✅ Caches cleared and optimized
+
+**Note:** These extension date fields are simpler than the formal LanjutanTempoh system. They provide quick extension date tracking directly on SST/Kontrak records, while LanjutanTempoh provides full extension management with approval workflow, justification, and value changes.
+
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-045 | Contract Workflow Tracking Implementation | ✅ Complete | 14 Mei 2026 |
+
+**TASK-045 Details - Contract Workflow Tracking:**
+- ✅ Created workflow_tracking_fields migration for daftar_kontrak:
+  - tarikh_deraf_ke_puu - Date sent to PUU (legal department)
+  - tarikh_terima_dari_puu - Date received from PUU
+  - tarikh_tandatangan - Contract signing date
+  - tarikh_stamping - Stamping date
+  - is_siap - Contract completion flag
+  - catatan_dalaman - Internal notes
+  - Added indexes for performance
+- ✅ Updated DaftarKontrak model:
+  - Added workflow fields to fillable array
+  - Added date casts for all workflow dates
+  - Added boolean cast for is_siap flag
+- ✅ Created ContractWorkflowService with 15 comprehensive methods:
+  - **Workflow Methods (5 methods):**
+    - markAsSentToPUU() - Mark contract as sent to PUU
+    - markAsReceivedFromPUU() - Mark as received from PUU with validation
+    - markAsSigned() - Mark contract as signed with date validation
+    - markAsStamped() - Mark as stamped and auto-complete
+    - resetWorkflow() - Reset to draft stage
+  - **Status & Helper Methods (6 methods):**
+    - getCurrentStage() - Get current workflow stage (6 stages)
+    - getWorkflowProgress() - Calculate completion percentage
+    - getStageTimeline() - Calculate days in each stage
+    - getWorkflowStages() - Get all workflow stages in order
+    - getWorkflowStatusBadge() - Get badge configuration with colors/icons
+    - validateWorkflowDates() - Comprehensive date validation
+  - **Logging:**
+    - logWorkflowTransition() - Log all state changes with context
+  - **Workflow Stages:**
+    - Deraf (gray, document icon)
+    - Ke PUU (info, arrow-right icon)
+    - Dari PUU (warning, arrow-left icon)
+    - Tandatangan (primary, pencil icon)
+    - Stamping (secondary, document-check icon)
+    - Siap (success, check-circle icon)
+  - **Features:**
+    - Sequential date validation (each date must be after previous)
+    - Database transactions for integrity
+    - Automatic is_siap flag when stamped
+    - Comprehensive error handling
+    - Malay language messages
+- ✅ Enhanced DaftarKontrakResource form:
+  - Added "Penjejakan Workflow" section with 5 fields
+  - Reactive validation for date sequence
+  - Auto-set is_siap toggle when tarikh_stamping filled
+  - Helper text explaining each workflow stage
+  - Collapsible section for better UX
+  - Added "Catatan Dalaman" section for notes
+- ✅ Enhanced DaftarKontrakResource table:
+  - Added "Peringkat Workflow" badge column showing current stage
+  - Dynamic colors and icons based on stage
+  - Added "Siap" icon column (check/clock icons)
+  - Added "Tarikh Stamping" column with badge
+  - Sortable workflow columns
+- ✅ Enhanced filters:
+  - Added "Status Siap" ternary filter (Siap/Dalam Pemprosesan/Semua)
+  - Added "Belum Stamping" toggle filter
+  - Both filters work with workflow logic
+- ✅ Migration executed successfully
+- ✅ All caches cleared and optimized
+- ✅ No diagnostics errors
+
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-046 | Kategori Risk Auto-calculation System | ✅ Complete | 14 Mei 2026 |
+
+**TASK-046 Details - Kategori Risk Auto-calculation:**
+- ✅ Created UpdateKategoriRisiko command (kategori:update):
+  - **Command Features:**
+    - --dry-run option for testing without saving
+    - Beautiful ASCII table summary output
+    - Detailed per-record logging with SST numbers and days
+    - Database transactions for data integrity
+    - Comprehensive error handling and logging
+  - **Kategori 1 Detection Logic:**
+    - SST is active (AKTIF/BARU/LULUS status)
+    - Days until tarikh_tamat <= 180 (expiring within 6 months)
+    - Related contract has NOT been sent to PUU (tarikh_deraf_ke_puu IS NULL)
+    - High risk: Contract expiring soon without formal processing
+  - **Kategori 2 Detection Logic:**
+    - SST is active (AKTIF/BARU/LULUS status)
+    - Days since created_at >= 120 (4 months since creation)
+    - Related contract has NOT been sent to PUU (tarikh_deraf_ke_puu IS NULL)
+    - High risk: Long processing time without PUU submission
+  - **Calculation Process:**
+    - Reset all kategori flags first
+    - Query active SST records with eager loading
+    - Check related contracts for PUU submission status
+    - Update is_kategori_1 and is_kategori_2 flags
+    - Log execution with counts
+- ✅ Scheduled command to run daily at 8:00 AM:
+  - Added to bootstrap/app.php using withSchedule()
+  - Timezone: Asia/Kuala_Lumpur
+  - WithoutOverlapping: Prevents concurrent execution
+  - OnOneServer: For multi-server deployments
+- ✅ Enhanced DaftarSstResource table:
+  - Replaced hidden IconColumns with prominent "Kategori Risiko" badge
+  - Shows combined status: "Kategori 1", "Kategori 2", or "Kategori 1 & 2"
+  - Danger badge color (red) with exclamation-triangle icon for high risk
+  - Gray badge with no icon for no risk
+  - Custom sorting: highest priority first (both > single > none)
+  - Placeholder "—" when no kategori
+  - Visible by default (not hidden)
+- ✅ Enhanced filters:
+  - Existing TernaryFilter for is_kategori_1 (Ya/Tidak/Semua)
+  - Existing TernaryFilter for is_kategori_2 (Ya/Tidak/Semua)
+  - Added "Risiko Tinggi" toggle filter for any kategori (quick access)
+- ✅ Features:
+  - Automated daily calculation eliminates manual checks
+  - Early warning system for expiring contracts
+  - Identifies contracts stuck in processing
+  - Helps prioritize PUU submissions
+  - Visual risk indicators in table
+  - Flexible filtering for risk management
+- ✅ Command tested with --dry-run
+- ✅ All caches cleared and optimized
+- ✅ No diagnostics errors
+
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-047 | Enhanced Filters & Excel Export | ✅ Complete | 14 Mei 2026 |
+
+**TASK-047 Details - Enhanced Filters & Excel Export:**
+- ✅ Added Excel export to DaftarKontrakResource:
+  - **ExportBulkAction with comprehensive columns:**
+    - No. Kontrak, No. SST, Tajuk, Pembekal
+    - Nilai Kontrak with number formatting (2 decimals)
+    - All workflow dates (Tarikh Kontrak, Mula, Tamat, Ke PUU, Dari PUU, Tandatangan, Stamping)
+    - Status Siap (Ya/Tidak), Status Kontrak
+    - Pegawai Pengawal, Pegawai Penyelia
+    - Tarikh Dicipta with time
+  - **Export Features:**
+    - Filename: laporan-kontrak-YYYY-MM-DD
+    - Dates formatted as d/m/Y
+    - Currency formatted with 2 decimals
+    - Boolean fields as Ya/Tidak
+    - Exports selected records only
+  - **Uses filament-excel package (pxlrbt/filament-excel 2.5.0)**
+- ✅ Added Excel export to DaftarSstResource:
+  - **ExportBulkAction with comprehensive columns:**
+    - No. SST, Tajuk, Jabatan, Seksyen/Unit, Pembekal
+    - Nilai Kontrak, Nilai Komitmen, Baki (all formatted)
+    - Tarikh Mula, Tarikh Tamat, Hari Sehingga Tamat
+    - Status, Kategori 1 (Ya/Tidak), Kategori 2 (Ya/Tidak)
+    - Pegawai Pengawal, Pegawai Penyelia
+    - Tarikh Dicipta with time
+  - **Export Features:**
+    - Filename: laporan-sst-YYYY-MM-DD
+    - Same formatting as kontrak export
+    - Kategori flags exported as Ya/Tidak
+- ✅ Enhanced DaftarKontrakResource filters:
+  - **Date Range Filter:**
+    - Tarikh Tamat from/to date pickers
+    - Filter indicators show selected dates
+    - Removable indicators for easy clearing
+  - **Workflow Stage Filter:**
+    - Dropdown with 6 workflow stages
+    - Smart query logic for each stage:
+      - Deraf: No tarikh_deraf_ke_puu
+      - Ke PUU: Has tarikh_deraf_ke_puu, no tarikh_terima_dari_puu
+      - Dari PUU: Has tarikh_terima_dari_puu, no tarikh_tandatangan
+      - Tandatangan: Has tarikh_tandatangan, no tarikh_stamping
+      - Stamping: Has tarikh_stamping, is_siap = false
+      - Siap: is_siap = true
+  - **Existing Filters Enhanced:**
+    - SST filter (searchable dropdown)
+    - Pembekal filter (searchable dropdown)
+    - Status Kontrak filter
+    - Status Siap ternary filter
+    - Belum Stamping toggle
+    - Trashed filter
+- ✅ Excel export packages confirmed installed:
+  - maatwebsite/excel 3.1.69
+  - pxlrbt/filament-excel 2.5.0
+- ✅ All filters tested and working
+- ✅ All caches cleared and optimized
+- ✅ No diagnostics errors
+
 #### Completed Early from Phase 3:
 - ✅ TASK-035: SST Models & Relationships (completed in Phase 1)
 - ✅ TASK-037 to TASK-040: SST Filament Resource (completed in Phase 1)
+
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-048 | Additional Module Enhancements (Bon, Penilaian, Aduan) | ✅ Complete | 14 Mei 2026 |
+
+**TASK-048 Details - Additional Module Enhancements:**
+- ✅ Added Excel export to BonPelaksanaanResource:
+  - **ExportBulkAction with 14 comprehensive columns:**
+    - No. Bon, No. Kontrak, No. SST
+    - Jenis Bon, Nilai Bon (formatted with 2 decimals)
+    - Institusi Penjamin
+    - Tarikh Mula, Tarikh Tamat (d/m/Y format)
+    - Hari Sehingga Tamat
+    - Status (formatted)
+    - Ada Dokumen (Ya/Tidak)
+    - Jabatan, Pegawai Pengawal
+    - Tarikh Dicipta with time
+  - **Export filename:** laporan-bon-pelaksanaan-YYYY-MM-DD
+- ✅ Enhanced BonPelaksanaanResource filters:
+  - **Date Range Filter:** Tarikh Tamat from/to with indicators
+  - **Akan Tamat Filter:** TernaryFilter for bonds expiring ≤90 days
+  - **Status Kritikal Filter:** TernaryFilter for bonds expiring ≤7 days (critical)
+  - SQL-based filtering using DATEDIFF for accurate day calculations
+- ✅ Added Excel export to PenilaianPrestasiResource:
+  - **ExportBulkAction with 17 comprehensive columns:**
+    - No. Kontrak, No. SST, Nama Pembekal
+    - Tarikh Penilaian (d/m/Y format), Tempoh Penilaian
+    - All 4 criteria scores: Kualiti, Masa, Kos, Keselamatan
+    - Skor Keseluruhan (formatted with 2 decimals)
+    - Gred (A/B/C/D/E)
+    - Ulasan, Cadangan Penambahbaikan
+    - Dinilai Oleh, Jawatan Penilai
+    - Ada Dokumen (Ya/Tidak)
+    - Tarikh Dicipta with time
+  - **Export filename:** laporan-penilaian-prestasi-YYYY-MM-DD
+- ✅ Enhanced PenilaianPrestasiResource filters:
+  - **Date Range Filter:** Tarikh Penilaian from/to with indicators
+  - **Tahun Filter:** Dropdown for year selection (last 5 years to next year)
+  - Existing Grade filter, Skor Tinggi, and Skor Rendah filters retained
+- ✅ Added Excel export to AduanResource:
+  - **ExportBulkAction with 18 comprehensive columns:**
+    - No. Aduan, No. Kontrak, No. SST, Nama Pembekal
+    - Tarikh Aduan (d/m/Y format)
+    - Tajuk, Penerangan
+    - Kategori (formatted with proper spacing)
+    - Keutamaan (formatted)
+    - Status (formatted)
+    - All pengadu details: Nama, Jabatan, Telefon, E-mel
+    - Tindakan Diambil
+    - Tarikh Tindakan, Tarikh Selesai (d/m/Y format)
+    - Tarikh Dicipta with time
+  - **Export filename:** laporan-aduan-YYYY-MM-DD
+- ✅ Enhanced AduanResource filters:
+  - **Date Range Filter:** Tarikh Aduan from/to with indicators
+  - **Multi-select filters:** Kategori, Keutamaan, and Status now support multiple selections
+  - Existing quick filters retained: Belum Selesai, Keutamaan Kritikal/Tinggi
+- ✅ Common features across all three resources:
+  - Comprehensive Excel export with proper Malay column headings
+  - Date formatting: d/m/Y for consistency
+  - Currency formatting: 2 decimal places
+  - Boolean fields: Ya/Tidak
+  - All exports include related data via relationships
+  - Advanced filtering with date ranges and status indicators
+  - Filter indicators for easy clearing
+- ✅ Caches cleared and Filament optimized
+- ✅ No diagnostics errors
 
 #### Remaining Phase 3 Tasks:
 - ✅ TASK-041: SST Validation & Business Logic (COMPLETED)
 - ✅ TASK-042: SST Approval Workflow (COMPLETED)
 - ✅ TASK-043: Contract Extension System (COMPLETED)
-- ⏳ TASK-044 to TASK-045: SST Extensions (Lanjutan SST direct extensions)
-- ⏳ TASK-046 to TASK-050: Daftar Kontrak Module Enhancements
-- ⏳ TASK-051 to TASK-053: Document Management (Lampiran Dokumen)
+- ✅ TASK-044: SST & Kontrak Extension Date Fields (COMPLETED)
+- ✅ TASK-045: Contract Workflow Tracking (COMPLETED)
+- ✅ TASK-046: Kategori Risk Auto-calculation (COMPLETED)
+- ✅ TASK-047: Enhanced Filters & Excel Export (COMPLETED)
+- ✅ TASK-048: Additional Module Enhancements (COMPLETED)
+- ✅ TASK-049: LanjutanTempoh Module Enhancements (COMPLETED)
+- ✅ TASK-050: Pembekal Module Enhancements (COMPLETED)
+- ⏳ TASK-051 to TASK-053: Document Management Enhancements (Lampiran Dokumen)
 - ⏳ TASK-054: Sprint 2 Demo
 
 ---
@@ -1025,9 +1339,9 @@ None currently ✅
 ## Key Performance Indicators (KPIs)
 
 ### Development Velocity
-- **Story Points Completed:** 183/240 (76%) ⬆️ +2%
-- **Sprint Velocity:** ~50 points/week ⬆️ Sustained high velocity
-- **Projected Completion:** Week 27 (ahead of schedule)
+- **Story Points Completed:** 205/240 (85%) ⬆️ +9%
+- **Sprint Velocity:** ~52 points/week ⬆️ Sustained high velocity
+- **Projected Completion:** Week 25 (ahead of schedule)
 
 ### Code Quality
 - **Unit Test Coverage:** 0% (testing framework starting Phase 2)
@@ -1048,13 +1362,16 @@ None currently ✅
 - **View Pages:** 4/4 main resources (100%) ✅ [+1 ViewUser]
 - **API Services:** 2/2 (100%) ✅ NEW [EPSM, iDaftar both complete]
 - **Custom Validation Rules:** 4/4 (100%) ✅ [StrongPassword, ValidSstNumber, ValidContractFinancials, ValidContractPeriod]
-- **Business Logic Services:** 4/4 (100%) ✅ NEW [EPSMService, IDaftarService, SstBusinessLogicService, SstApprovalWorkflowService]
-- **Workflow Systems:** 1/1 (100%) ✅ NEW [SST Approval Workflow with 5 statuses]
+- **Business Logic Services:** 6/6 (100%) ✅ NEW [EPSMService, IDaftarService, SstBusinessLogicService, SstApprovalWorkflowService, ContractExtensionService, ContractWorkflowService]
+- **Workflow Systems:** 2/2 (100%) ✅ NEW [SST Approval Workflow, Contract Workflow Tracking with 6 stages]
 - **2FA Implementation:** 1/1 (100%) ✅ [Fortify + Filament page]
 - **RBAC Enforcement:** 1/1 (100%) ✅ [Shield + Policies]
 - **Global Scopes:** 2/2 (100%) ✅ NEW [DepartmentScope, DaftarSstRelationshipScope]
 - **Policy Traits:** 1/1 (100%) ✅ NEW [HasDepartmentScoping]
 - **Department Scoping:** 5/5 models (100%) ✅ NEW [All transaction models scoped]
+- **Automated Commands:** 1/1 (100%) ✅ NEW [UpdateKategoriRisiko scheduled daily]
+- **Excel Export:** 2/2 resources (100%) ✅ NEW [DaftarSst, DaftarKontrak with comprehensive columns]
+- **Advanced Filters:** 2/2 resources (100%) ✅ NEW [Date ranges, workflow stages, risk categories]
 
 ---
 

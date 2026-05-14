@@ -40,6 +40,8 @@ class DaftarSst extends Model implements Auditable
         'status_kontrak_id',
         'tarikh_mula',
         'tarikh_tamat',
+        'tarikh_lanjutan_1',
+        'tarikh_lanjutan_2',
         'tempoh_bulan',
         'nilai_kontrak',
         'nilai_komitmen',
@@ -64,6 +66,8 @@ class DaftarSst extends Model implements Auditable
     protected $casts = [
         'tarikh_mula' => 'date',
         'tarikh_tamat' => 'date',
+        'tarikh_lanjutan_1' => 'date',
+        'tarikh_lanjutan_2' => 'date',
         'nilai_kontrak' => 'decimal:2',
         'nilai_komitmen' => 'decimal:2',
         'baki_kontrak' => 'decimal:2',
