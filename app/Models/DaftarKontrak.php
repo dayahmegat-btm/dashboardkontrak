@@ -95,6 +95,11 @@ class DaftarKontrak extends Model implements Auditable
         return $this->hasMany(Aduan::class);
     }
 
+    public function lanjutanTempohs(): HasMany
+    {
+        return $this->hasMany(LanjutanTempoh::class);
+    }
+
     public function dokumens(): MorphMany
     {
         return $this->morphMany(Dokumen::class, 'documentable');

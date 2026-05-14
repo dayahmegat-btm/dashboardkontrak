@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -134,6 +135,11 @@ class DaftarSst extends Model implements Auditable
     public function daftarKontraks(): HasMany
     {
         return $this->hasMany(DaftarKontrak::class);
+    }
+
+    public function lanjutanTempohs(): HasManyThrough
+    {
+        return $this->hasManyThrough(LanjutanTempoh::class, DaftarKontrak::class);
     }
 
     public function dokumens(): MorphMany
