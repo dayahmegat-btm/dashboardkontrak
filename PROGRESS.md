@@ -1,9 +1,9 @@
 # Project Progress Report
 ## Sistem Pengurusan Kontrak SUK Kedah
 
-**Last Updated:** 14 Mei 2026 (Updated: Workflow Tracking, Kategori Auto-calculation, Advanced Filters & Excel Export Complete)
+**Last Updated:** 14 Mei 2026 (Updated: All Module Enhancements Complete - 7 Resources with Excel Export & Advanced Filters)
 **Current Phase:** Phase 3 (Week 11) - IN PROGRESS 🚀
-**Overall Progress:** ~85% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow, Contract Extensions, Workflow Tracking, Kategori System & Excel Export Complete)
+**Overall Progress:** ~90% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow, Contract Extensions, Workflow Tracking, Kategori System, Excel Export & Advanced Filters Complete for All Main Resources)
 
 ---
 
@@ -1197,6 +1197,66 @@
 - ✅ Caches cleared and Filament optimized
 - ✅ No diagnostics errors
 
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-049 | LanjutanTempoh Module Enhancements | ✅ Complete | 14 Mei 2026 |
+
+**TASK-049 Details - LanjutanTempoh Module Enhancements:**
+- ✅ Added Excel export to LanjutanTempohResource:
+  - **ExportBulkAction with 23 comprehensive columns:**
+    - No. Lanjutan, No. Kontrak, No. SST, Nama Pembekal
+    - Lanjutan Ke (sequence number)
+    - Tarikh Mula/Tamat Asal (original dates, d/m/Y format)
+    - Tarikh Mula/Tamat Baru (new dates, d/m/Y format)
+    - Tempoh Lanjutan (months)
+    - Nilai Kontrak Asal, Nilai Tambahan, Nilai Kontrak Baru (all with 2 decimals)
+    - Sebab Lanjutan, Justifikasi
+    - Status
+    - Ada Dokumen (Ya/Tidak)
+    - Dihantar Oleh, Tarikh Hantar (with time)
+    - Diluluskan Oleh, Tarikh Lulus (with time)
+    - Jabatan
+    - Tarikh Dicipta (with time)
+  - **Export filename:** laporan-lanjutan-tempoh-YYYY-MM-DD
+- ✅ Enhanced LanjutanTempohResource filters:
+  - **Enhanced Date Range Filter:** Added indicators for tarikh_tamat_baru filter
+  - **Sebab Lanjutan Filter:** Multi-select filter with 8 options (Kelewatan Projek, Tambahan Skop Kerja, Perubahan Spesifikasi, Keadaan Cuaca, Force Majeure, Perubahan Polisi, Kelulusan Lambat, Lain-lain)
+  - **Nilai Tambahan Range Filter:** Min/max filter with currency indicators (RM format)
+  - **Tahun Filter:** Dropdown for year selection (last 5 years to next year)
+  - **Ada Nilai Tambahan Filter:** TernaryFilter to quickly find extensions with/without additional costs
+  - Existing filters retained: Status, Lanjutan Ke, TrashedFilter
+
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-050 | Pembekal Module Enhancements | ✅ Complete | 14 Mei 2026 |
+
+**TASK-050 Details - Pembekal Module Enhancements:**
+- ✅ Added Excel export to PembekalResource:
+  - **ExportBulkAction with 13 comprehensive columns:**
+    - Nama Syarikat, No. Pendaftaran SSM
+    - Alamat, No. Telefon, Emel
+    - Nama PIC, Telefon PIC, Emel PIC
+    - Bilangan SST (count of related SSTs)
+    - Status Aktif (Aktif/Tidak Aktif)
+    - Tarikh Dicipta, Tarikh Kemaskini, Tarikh Dipadam (all with time)
+  - **Export filename:** laporan-pembekal-YYYY-MM-DD
+- ✅ Enhanced PembekalResource filters:
+  - **Bilangan SST Range Filter:** Min/max filter for number of SSTs with indicators
+  - **Maklumat PIC Filter:** TernaryFilter to find suppliers with/without PIC information
+  - **Maklumat Hubungan Filter:** TernaryFilter to find suppliers with/without contact information (telefon or emel)
+  - **Status SST Filter:** TernaryFilter to find suppliers with/without active SSTs
+  - Existing filters retained: Status Aktif, TrashedFilter
+- ✅ Common features for both resources:
+  - Comprehensive Excel export with proper Malay column headings
+  - Date formatting: d/m/Y for consistency
+  - Currency formatting: 2 decimal places (for LanjutanTempoh)
+  - Boolean fields: Ya/Tidak, Aktif/Tidak Aktif
+  - All exports include related data via relationships
+  - Advanced filtering with multiple criteria
+  - Filter indicators for easy clearing
+- ✅ Caches cleared and Filament optimized
+- ✅ No diagnostics errors
+
 #### Remaining Phase 3 Tasks:
 - ✅ TASK-041: SST Validation & Business Logic (COMPLETED)
 - ✅ TASK-042: SST Approval Workflow (COMPLETED)
@@ -1370,8 +1430,8 @@ None currently ✅
 - **Policy Traits:** 1/1 (100%) ✅ NEW [HasDepartmentScoping]
 - **Department Scoping:** 5/5 models (100%) ✅ NEW [All transaction models scoped]
 - **Automated Commands:** 1/1 (100%) ✅ NEW [UpdateKategoriRisiko scheduled daily]
-- **Excel Export:** 2/2 resources (100%) ✅ NEW [DaftarSst, DaftarKontrak with comprehensive columns]
-- **Advanced Filters:** 2/2 resources (100%) ✅ NEW [Date ranges, workflow stages, risk categories]
+- **Excel Export:** 7/7 resources (100%) ✅ [DaftarSst, DaftarKontrak, BonPelaksanaan, PenilaianPrestasi, Aduan, LanjutanTempoh, Pembekal - all with comprehensive columns]
+- **Advanced Filters:** 7/7 resources (100%) ✅ [All main resources with date ranges, status, workflow stages, risk categories, financial ranges]
 
 ---
 
