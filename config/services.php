@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'epsm' => [
+        'url' => env('EPSM_API_URL', 'https://api.epsm.gov.my'),
+        'api_key' => env('EPSM_API_KEY', ''),
+        'timeout' => env('EPSM_API_TIMEOUT', 10),
+        'retries' => env('EPSM_API_RETRIES', 3),
+    ],
+
+    'idaftar' => [
+        'url' => env('IDAFTAR_API_URL', 'https://api.idaftar.gov.my'),
+        'api_key' => env('IDAFTAR_API_KEY', ''),
+        'timeout' => env('IDAFTAR_API_TIMEOUT', 10),
+        'cache_ttl' => env('IDAFTAR_CACHE_TTL', 10080), // 7 days in minutes
+    ],
+
 ];

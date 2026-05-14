@@ -29,10 +29,9 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
         ]);
 
-        // Uncomment to create test user
-        // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        // User Seeders (run after RBAC)
+        $this->call([
+            UserSeeder::class,
+        ]);
     }
 }
