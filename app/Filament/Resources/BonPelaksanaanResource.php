@@ -229,7 +229,9 @@ class BonPelaksanaanResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DokumenRelationManager::class,
+            RelationManagers\CatatanRelationManager::class,
+            RelationManagers\LampiranRelationManager::class,
         ];
     }
 

@@ -323,7 +323,9 @@ class DaftarSstResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DokumenRelationManager::class,
+            RelationManagers\CatatanRelationManager::class,
+            RelationManagers\LampiranRelationManager::class,
         ];
     }
 
@@ -332,6 +334,7 @@ class DaftarSstResource extends Resource
         return [
             'index' => Pages\ListDaftarSsts::route('/'),
             'create' => Pages\CreateDaftarSst::route('/create'),
+            'view' => Pages\ViewDaftarSst::route('/{record}'),
             'edit' => Pages\EditDaftarSst::route('/{record}/edit'),
         ];
     }
