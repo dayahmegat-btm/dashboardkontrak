@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\DepartmentScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,14 @@ class DaftarSst extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'daftar_sst';
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new DepartmentScope);
+    }
 
     protected $fillable = [
         'no_sst',
@@ -41,6 +50,14 @@ class DaftarSst extends Model implements Auditable
         'hari_sehingga_tamat',
         'created_by',
         'updated_by',
+        'submitted_by',
+        'submitted_at',
+        'approved_by',
+        'approved_at',
+        'approval_notes',
+        'rejected_by',
+        'rejected_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
@@ -53,6 +70,9 @@ class DaftarSst extends Model implements Auditable
         'is_kategori_2' => 'boolean',
         'tempoh_bulan' => 'integer',
         'hari_sehingga_tamat' => 'integer',
+        'submitted_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
     ];
 
     // Relationships
@@ -94,6 +114,21 @@ class DaftarSst extends Model implements Auditable
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function submittedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function daftarKontraks(): HasMany

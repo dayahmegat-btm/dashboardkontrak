@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\DaftarSstRelationshipScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,14 @@ class Aduan extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'aduan';
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new DaftarSstRelationshipScope);
+    }
 
     protected $fillable = [
         'daftar_kontrak_id',

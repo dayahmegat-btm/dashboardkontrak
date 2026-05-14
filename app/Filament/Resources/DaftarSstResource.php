@@ -5,8 +5,14 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DaftarSstResource\Pages;
 use App\Filament\Resources\DaftarSstResource\RelationManagers;
 use App\Models\DaftarSst;
+use App\Rules\ValidContractFinancials;
+use App\Rules\ValidContractPeriod;
+use App\Rules\ValidSstNumber;
+use App\Services\SstApprovalWorkflowService;
+use App\Services\SstBusinessLogicService;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -38,7 +44,24 @@ class DaftarSstResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(100)
-                            ->placeholder('Contoh: SST/BPP/2024/001'),
+                            ->placeholder('Contoh: SST/2026/0001')
+                            ->rules([new ValidSstNumber()])
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('generate_sst_number')
+                                    ->label('Jana No. SST')
+                                    ->icon('heroicon-o-sparkles')
+                                    ->action(function (Forms\Set $set) {
+                                        $sstService = app(SstBusinessLogicService::class);
+                                        $newNumber = $sstService->generateSstNumber();
+                                        $set('no_sst', $newNumber);
+
+                                        Notification::make()
+                                            ->success()
+                                            ->title('No. SST dijana')
+                                            ->body("No. SST baru: {$newNumber}")
+                                            ->send();
+                                    })
+                            ),
                         Forms\Components\TextInput::make('tajuk')
                             ->label('Tajuk')
                             ->required()
@@ -114,28 +137,55 @@ class DaftarSstResource extends Resource
                                 $tarikhMula = $state;
                                 $tempohBulan = $get('tempoh_bulan');
                                 if ($tarikhMula && $tempohBulan) {
-                                    $tarikhTamat = date('Y-m-d', strtotime("+{$tempohBulan} months", strtotime($tarikhMula)));
-                                    $set('tarikh_tamat', $tarikhTamat);
+                                    $sstService = app(SstBusinessLogicService::class);
+                                    $tarikhTamat = $sstService->calculateTarikhTamat($tarikhMula, (int)$tempohBulan);
+                                    $set('tarikh_tamat', $tarikhTamat->format('Y-m-d'));
                                 }
-                            }),
+                            })
+                            ->rules([
+                                fn (callable $get) => new ValidContractPeriod(
+                                    'tarikh_mula',
+                                    null,
+                                    $get('tarikh_tamat'),
+                                    $get('tempoh_bulan')
+                                )
+                            ]),
                         Forms\Components\TextInput::make('tempoh_bulan')
                             ->label('Tempoh (Bulan)')
                             ->required()
                             ->numeric()
                             ->minValue(1)
+                            ->maxValue(120)
                             ->reactive()
                             ->afterStateUpdated(function (callable $set, callable $get, $state) {
                                 $tarikhMula = $get('tarikh_mula');
                                 $tempohBulan = $state;
                                 if ($tarikhMula && $tempohBulan) {
-                                    $tarikhTamat = date('Y-m-d', strtotime("+{$tempohBulan} months", strtotime($tarikhMula)));
-                                    $set('tarikh_tamat', $tarikhTamat);
+                                    $sstService = app(SstBusinessLogicService::class);
+                                    $tarikhTamat = $sstService->calculateTarikhTamat($tarikhMula, (int)$tempohBulan);
+                                    $set('tarikh_tamat', $tarikhTamat->format('Y-m-d'));
                                 }
-                            }),
+                            })
+                            ->rules([
+                                fn (callable $get) => new ValidContractPeriod(
+                                    'tempoh_bulan',
+                                    $get('tarikh_mula'),
+                                    $get('tarikh_tamat'),
+                                    null
+                                )
+                            ]),
                         Forms\Components\DatePicker::make('tarikh_tamat')
                             ->label('Tarikh Tamat')
                             ->required()
-                            ->displayFormat('d/m/Y'),
+                            ->displayFormat('d/m/Y')
+                            ->rules([
+                                fn (callable $get) => new ValidContractPeriod(
+                                    'tarikh_tamat',
+                                    $get('tarikh_mula'),
+                                    null,
+                                    $get('tempoh_bulan')
+                                )
+                            ]),
                     ])
                     ->columns(3),
 
@@ -147,12 +197,21 @@ class DaftarSstResource extends Resource
                             ->numeric()
                             ->prefix('RM')
                             ->minValue(0)
+                            ->maxValue(100000000)
                             ->reactive()
                             ->afterStateUpdated(function (callable $set, callable $get, $state) {
                                 $nilaiKomitmen = $get('nilai_komitmen') ?? 0;
-                                $baki = $state - $nilaiKomitmen;
+                                $sstService = app(SstBusinessLogicService::class);
+                                $baki = $sstService->calculateBakiKontrak((float)$state, (float)$nilaiKomitmen);
                                 $set('baki_kontrak', $baki);
-                            }),
+                            })
+                            ->rules([
+                                fn (callable $get) => new ValidContractFinancials(
+                                    'nilai_kontrak',
+                                    null,
+                                    $get('nilai_komitmen')
+                                )
+                            ]),
                         Forms\Components\TextInput::make('nilai_komitmen')
                             ->label('Nilai Komitmen (RM)')
                             ->numeric()
@@ -162,16 +221,31 @@ class DaftarSstResource extends Resource
                             ->reactive()
                             ->afterStateUpdated(function (callable $set, callable $get, $state) {
                                 $nilaiKontrak = $get('nilai_kontrak') ?? 0;
-                                $baki = $nilaiKontrak - $state;
+                                $sstService = app(SstBusinessLogicService::class);
+                                $baki = $sstService->calculateBakiKontrak((float)$nilaiKontrak, (float)$state);
                                 $set('baki_kontrak', $baki);
-                            }),
+                            })
+                            ->rules([
+                                fn (callable $get) => new ValidContractFinancials(
+                                    'nilai_komitmen',
+                                    $get('nilai_kontrak'),
+                                    null
+                                )
+                            ]),
                         Forms\Components\TextInput::make('baki_kontrak')
                             ->label('Baki Kontrak (RM)')
                             ->numeric()
                             ->prefix('RM')
                             ->default(0.00)
                             ->disabled()
-                            ->dehydrated(),
+                            ->dehydrated()
+                            ->rules([
+                                fn (callable $get) => new ValidContractFinancials(
+                                    'baki_kontrak',
+                                    $get('nilai_kontrak'),
+                                    $get('nilai_komitmen')
+                                )
+                            ]),
                     ])
                     ->columns(3),
 
@@ -307,6 +381,125 @@ class DaftarSstResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('submit_approval')
+                    ->label('Hantar')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('Hantar SST untuk kelulusan?')
+                    ->modalDescription('SST ini akan dihantar kepada pihak atasan untuk kelulusan.')
+                    ->action(function (DaftarSst $record) {
+                        $workflowService = app(SstApprovalWorkflowService::class);
+                        $result = $workflowService->submitForApproval($record);
+
+                        if ($result['success']) {
+                            Notification::make()
+                                ->success()
+                                ->title($result['message'])
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->danger()
+                                ->title($result['message'])
+                                ->body(isset($result['errors']) ? implode('<br>', $result['errors']) : '')
+                                ->send();
+                        }
+                    })
+                    ->visible(fn (DaftarSst $record) => $record->statusKontrak->kod === 'DERAF'),
+                Tables\Actions\Action::make('approve')
+                    ->label('Lulus')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->form([
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Catatan Kelulusan')
+                            ->rows(3)
+                            ->placeholder('Catatan tambahan (pilihan)'),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Luluskan SST?')
+                    ->modalDescription('Anda pasti untuk meluluskan SST ini?')
+                    ->action(function (DaftarSst $record, array $data) {
+                        $workflowService = app(SstApprovalWorkflowService::class);
+                        $result = $workflowService->approve($record, $data['notes'] ?? null);
+
+                        if ($result['success']) {
+                            Notification::make()
+                                ->success()
+                                ->title($result['message'])
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->danger()
+                                ->title($result['message'])
+                                ->send();
+                        }
+                    })
+                    ->visible(fn (DaftarSst $record) =>
+                        in_array($record->statusKontrak->kod, ['HANTAR', 'SEMAK']) &&
+                        auth()->user()->hasAnyRole(['super-admin', 'admin', 'pengarah', 'sk-exec'])
+                    ),
+                Tables\Actions\Action::make('reject')
+                    ->label('Tolak')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->form([
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Sebab Penolakan')
+                            ->required()
+                            ->rows(3)
+                            ->placeholder('Sila nyatakan sebab penolakan...'),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Tolak SST?')
+                    ->modalDescription('SST akan dikembalikan kepada pemohon untuk semakan semula.')
+                    ->action(function (DaftarSst $record, array $data) {
+                        $workflowService = app(SstApprovalWorkflowService::class);
+                        $result = $workflowService->reject($record, $data['reason']);
+
+                        if ($result['success']) {
+                            Notification::make()
+                                ->success()
+                                ->title($result['message'])
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->danger()
+                                ->title($result['message'])
+                                ->send();
+                        }
+                    })
+                    ->visible(fn (DaftarSst $record) =>
+                        in_array($record->statusKontrak->kod, ['HANTAR', 'SEMAK']) &&
+                        auth()->user()->hasAnyRole(['super-admin', 'admin', 'pengarah', 'sk-exec'])
+                    ),
+                Tables\Actions\Action::make('activate')
+                    ->label('Aktifkan')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Aktifkan SST?')
+                    ->modalDescription('SST akan ditukar kepada status Aktif.')
+                    ->action(function (DaftarSst $record) {
+                        $workflowService = app(SstApprovalWorkflowService::class);
+                        $result = $workflowService->activate($record);
+
+                        if ($result['success']) {
+                            Notification::make()
+                                ->success()
+                                ->title($result['message'])
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->danger()
+                                ->title($result['message'])
+                                ->send();
+                        }
+                    })
+                    ->visible(fn (DaftarSst $record) =>
+                        $record->statusKontrak->kod === 'LULUS' &&
+                        auth()->user()->hasAnyRole(['super-admin', 'admin', 'sk-exec'])
+                    ),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

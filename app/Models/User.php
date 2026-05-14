@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Contracts\Auditable;
 use Spatie\Permission\Traits\HasRoles;
@@ -26,6 +27,7 @@ class User extends Authenticatable implements Auditable, FilamentUser, HasAvatar
     use HasRoles;
     use HasApiTokens;
     use SoftDeletes;
+    use TwoFactorAuthenticatable;
     use \OwenIt\Auditing\Auditable;
 
     /**
