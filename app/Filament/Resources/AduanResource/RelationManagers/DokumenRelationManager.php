@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DokumenRelationManager extends RelationManager
 {
-    protected static string $relationship = 'dokumen';
+    protected static string $relationship = 'dokumens';
 
     protected static ?string $title = 'Dokumen';
 

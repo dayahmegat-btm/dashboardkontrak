@@ -69,6 +69,16 @@ class BonPelaksanaan extends Model implements Auditable
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function dokumens(): MorphMany
+    {
+        return $this->morphMany(Dokumen::class, 'documentable');
+    }
+
+    public function catatans(): MorphMany
+    {
+        return $this->morphMany(Catatan::class, 'notable');
+    }
+
     public function lampirans(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'attachable');

@@ -39,7 +39,7 @@ class SstBusinessLogicService
      * @param string|Carbon $tarikhTamat
      * @return int Negative if expired
      */
-    public function calculateHariSehingga Tamat($tarikhTamat): int
+    public function calculateHariSehinggaTamat($tarikhTamat): int
     {
         $endDate = $tarikhTamat instanceof Carbon ? $tarikhTamat : Carbon::parse($tarikhTamat);
         $today = Carbon::today();
@@ -104,12 +104,12 @@ class SstBusinessLogicService
     /**
      * Get expiry status with color code
      *
-     * @param int|null $hariSehingga Tamat
+     * @param int|null $hariSehinggaTamat
      * @return array ['status' => string, 'color' => string, 'icon' => string]
      */
-    public function getExpiryStatus(?int $hariSehingga Tamat): array
+    public function getExpiryStatus(?int $hariSehinggaTamat): array
     {
-        if ($hariSehingga Tamat === null) {
+        if ($hariSehinggaTamat === null) {
             return [
                 'status' => 'Tiada Maklumat',
                 'color' => 'gray',
@@ -117,7 +117,7 @@ class SstBusinessLogicService
             ];
         }
 
-        if ($hariSehingga Tamat < 0) {
+        if ($hariSehinggaTamat < 0) {
             return [
                 'status' => 'Tamat Tempoh',
                 'color' => 'danger',
@@ -125,32 +125,32 @@ class SstBusinessLogicService
             ];
         }
 
-        if ($hariSehingga Tamat <= 7) {
+        if ($hariSehinggaTamat <= 7) {
             return [
-                'status' => 'Kritikal (' . $hariSehingga Tamat . ' hari)',
+                'status' => 'Kritikal (' . $hariSehinggaTamat . ' hari)',
                 'color' => 'danger',
                 'icon' => 'heroicon-o-exclamation-triangle',
             ];
         }
 
-        if ($hariSehingga Tamat <= 30) {
+        if ($hariSehinggaTamat <= 30) {
             return [
-                'status' => 'Amaran (' . $hariSehingga Tamat . ' hari)',
+                'status' => 'Amaran (' . $hariSehinggaTamat . ' hari)',
                 'color' => 'warning',
                 'icon' => 'heroicon-o-exclamation-circle',
             ];
         }
 
-        if ($hariSehingga Tamat <= 90) {
+        if ($hariSehinggaTamat <= 90) {
             return [
-                'status' => 'Makluman (' . $hariSehingga Tamat . ' hari)',
+                'status' => 'Makluman (' . $hariSehinggaTamat . ' hari)',
                 'color' => 'info',
                 'icon' => 'heroicon-o-information-circle',
             ];
         }
 
         return [
-            'status' => 'Aktif (' . $hariSehingga Tamat . ' hari)',
+            'status' => 'Aktif (' . $hariSehinggaTamat . ' hari)',
             'color' => 'success',
             'icon' => 'heroicon-o-check-circle',
         ];
@@ -235,7 +235,7 @@ class SstBusinessLogicService
      * Check if SST requires renewal/extension
      *
      * @param DaftarSst $sst
-     * @param int $noticeDay s Number of days before expiry to flag for renewal
+     * @param int $noticeDays Number of days before expiry to flag for renewal
      * @return bool
      */
     public function requiresRenewal(DaftarSst $sst, int $noticeDays = 90): bool
