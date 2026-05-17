@@ -419,7 +419,9 @@ class PenilaianPrestasiResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DokumenRelationManager::class,
+            RelationManagers\CatatanRelationManager::class,
+            RelationManagers\LampiranRelationManager::class,
         ];
     }
 
@@ -428,6 +430,7 @@ class PenilaianPrestasiResource extends Resource
         return [
             'index' => Pages\ListPenilaianPrestasis::route('/'),
             'create' => Pages\CreatePenilaianPrestasi::route('/create'),
+            'view' => Pages\ViewPenilaianPrestasi::route('/{record}'),
             'edit' => Pages\EditPenilaianPrestasi::route('/{record}/edit'),
         ];
     }

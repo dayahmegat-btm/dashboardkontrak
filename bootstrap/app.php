@@ -21,6 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone('Asia/Kuala_Lumpur')
             ->withoutOverlapping()
             ->onOneServer();
+
+        // Check and trigger daily alerts at 8:00 AM
+        $schedule->command('alerts:check-daily')
+            ->dailyAt('08:00')
+            ->timezone('Asia/Kuala_Lumpur')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->emailOutputOnFailure(config('mail.admin_email'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

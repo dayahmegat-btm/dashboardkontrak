@@ -387,7 +387,9 @@ class AduanResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DokumenRelationManager::class,
+            RelationManagers\CatatanRelationManager::class,
+            RelationManagers\LampiranRelationManager::class,
         ];
     }
 
@@ -396,6 +398,7 @@ class AduanResource extends Resource
         return [
             'index' => Pages\ListAduans::route('/'),
             'create' => Pages\CreateAduan::route('/create'),
+            'view' => Pages\ViewAduan::route('/{record}'),
             'edit' => Pages\EditAduan::route('/{record}/edit'),
         ];
     }
