@@ -1,9 +1,9 @@
 # Project Progress Report
 ## Sistem Pengurusan Kontrak SUK Kedah
 
-**Last Updated:** 17 Mei 2026 (Updated: Critical Alert Engine & Automated Notifications System Complete 🔔)
-**Current Phase:** Phase 3 (Week 11) - NEARING COMPLETION 🚀
-**Overall Progress:** ~95% (Auth Complete, iDaftar Integration Complete, SST Validation, Approval Workflow, Contract Extensions, Workflow Tracking, Kategori System, Excel Export, Advanced Filters, Document Management & Alert System Complete)
+**Last Updated:** 17 Mei 2026 (Updated: Dashboard Widgets & KPI System Complete 📊)
+**Current Phase:** Phase 3 (Week 11) - PHASE COMPLETE! 🎉
+**Overall Progress:** ~97% (Auth, iDaftar Integration, SST Validation, Approval Workflow, Contract Extensions, Workflow Tracking, Kategori System, Excel Export, Advanced Filters, Document Management, Alert System & Dashboard Widgets Complete)
 
 ---
 
@@ -51,6 +51,11 @@
 - ✅ **NEW** Bond expiry alerts (180, 90, 30, 7 days before)
 - ✅ **NEW** Bond return escalation (30, 60, 90 days - addresses audit findings)
 - ✅ **NEW** Performance evaluation monthly reminders
+- ✅ **NEW** Executive dashboard with 6 comprehensive widgets
+- ✅ **NEW** Real-time KPI tracking (12 key metrics)
+- ✅ **NEW** Interactive charts (doughnut, line, bar charts)
+- ✅ **NEW** Recent alerts monitoring table
+- ✅ **NEW** Auto-refreshing widgets (60s/120s intervals)
 
 ### Next Milestones
 1. ✅ COMPLETED - User model and authentication foundation
@@ -1473,6 +1478,146 @@
   - ✅ Multi-channel notifications (email + in-app)
   - ✅ Prevents audit findings on unreturned bonds
 
+| Task ID | Task Name | Status | Completion Date |
+|---------|-----------|--------|----------------|
+| TASK-055 | Dashboard Widgets & KPI Calculations | ✅ Complete | 17 Mei 2026 |
+
+**TASK-055 Details - Dashboard Widgets & KPI System:**
+- ✅ Created 6 comprehensive Filament widgets for executive dashboard:
+
+  **1. KontrakOverviewWidget.php - Contract KPI Stats (6 metrics):**
+  - **Kontrak Aktif:** Count of active contracts with success indicator
+  - **Hampir Tamat:** Contracts expiring in next 90 days (warning color if > 0)
+  - **Kategori 1 (Kritikal):** SST issued, no PUU draft, ending ≤6 months (danger if > 0)
+  - **Kategori 2 (Tinggi):** SST 4+ months old, no PUU draft (danger if > 0)
+  - **Jumlah Nilai Kontrak:** Total value of active contracts (RM formatted)
+  - **Menunggu Kelulusan:** SSTs pending approval (info color)
+  - Features: Sparkline charts, auto-refresh (60s), conditional colors, Malay labels
+
+  **2. BonPelaksanaanOverviewWidget.php - Performance Bond KPIs (6 metrics):**
+  - **Bon Aktif:** Count of active performance bonds
+  - **Tamat dalam 7 Hari:** Critical bonds expiring in 7 days (danger if > 0)
+  - **Tamat dalam 30 Hari:** Warning bonds expiring in 30 days (warning if > 0)
+  - **Tamat dalam 90 Hari:** Notice bonds expiring in 90 days (info if > 0)
+  - **Jumlah Nilai Bon:** Total value of active bonds (RM formatted)
+  - **Bon Belum Dipulangkan:** Unreturned bonds from completed contracts (warning if > 0)
+  - Features: Escalating priority colors, sparkline trends, addresses audit findings
+
+  **3. RecentAlertsWidget.php - Alert Log Table:**
+  - **Display:** Last 10 alerts from past 7 days
+  - **Columns:**
+    - Tarikh & Masa (date/time in d/m/Y H:i format)
+    - Kod Alert (badge with alert code: ALR-001 to ALR-010)
+    - Jenis Amaran (alert type description)
+    - Keutamaan (priority badge: KRITIKAL/TINGGI/SEDERHANA)
+    - Jenis Rekod (record type: Kontrak/Bon Pelaksanaan/SST)
+    - Status (sent/pending/failed with colored badges)
+    - Tarikh Dihantar (sent timestamp)
+  - **Features:**
+    - Full-width layout (columnSpan: full)
+    - Priority color coding (critical=danger, high=warning, medium=info)
+    - Status translations in Malay
+    - Latest alerts first (sorted by triggered_at desc)
+    - No pagination (fixed 10 entries)
+  - **Purpose:** Monitor recent system alerts and notification delivery status
+
+  **4. KontrakStatusChart.php - Doughnut Chart:**
+  - **Display:** Contract distribution by status
+  - **Type:** Doughnut chart with color-coded segments
+  - **Data Source:** DaftarKontrak grouped by status_kontrak_id
+  - **Features:**
+    - 8 distinct colors for different statuses
+    - Legend displayed at bottom
+    - Auto-refresh every 60 seconds
+    - Responsive sizing (maintainAspectRatio: false)
+  - **Purpose:** Visual overview of contract status distribution
+
+  **5. KontrakTrendChart.php - Line Chart:**
+  - **Display:** 12-month trend of new vs expired contracts
+  - **Type:** Multi-line chart with filled areas
+  - **Data Series:**
+    - Kontrak Baru (green line): Contracts starting each month
+    - Kontrak Tamat (red line): Contracts ending each month
+  - **Features:**
+    - Full-width layout (columnSpan: full)
+    - Last 12 months data with month labels (M Y format)
+    - Y-axis starts at zero with integer steps
+    - Legend at top
+    - Auto-refresh every 120 seconds
+  - **Purpose:** Track contract lifecycle trends and identify patterns
+
+  **6. NilaiKontrakByJabatanChart.php - Bar Chart:**
+  - **Display:** Top 10 departments by total active contract value
+  - **Type:** Horizontal bar chart
+  - **Data Source:** Active contracts sum(nilai_kontrak) grouped by jabatan
+  - **Features:**
+    - 10 distinct colors for bars
+    - Y-axis with RM currency formatting
+    - Long department names truncated to 30 chars
+    - No legend (labels shown on axes)
+    - Auto-refresh every 120 seconds
+  - **Purpose:** Identify departments with highest contract values for resource allocation
+
+- ✅ Widget Configuration:
+  - **Sorting:** Widgets ordered by $sort property (1-6)
+  - **Auto-Discovery:** Filament automatically discovers widgets in app/Filament/Widgets/
+  - **Polling:** Stats widgets refresh every 60s, charts every 120s
+  - **Responsive:** All widgets adapt to screen size
+  - **Conditional Colors:** Stat widgets change color based on values (success/warning/danger)
+  - **Malay Labels:** All labels, descriptions, and messages in Bahasa Malaysia
+
+- ✅ Data Calculations & Queries:
+  - Efficient Eloquent queries with proper relationships
+  - Date filtering using Carbon for accurate ranges
+  - Aggregation functions (count, sum, group by)
+  - Department-based filtering via relationships
+  - Status-based filtering for active/completed records
+  - Optimized queries with eager loading (with())
+
+- ✅ Chart.js Integration:
+  - Doughnut chart for status distribution
+  - Line chart with filled areas for trends
+  - Bar chart for department comparison
+  - Customizable options (colors, legends, axes)
+  - Responsive and interactive
+
+- ✅ Key Performance Indicators (KPIs) Tracked:
+  - **Operational Metrics:**
+    - Active contracts count and value
+    - Contracts expiring soon (90 days)
+    - Active performance bonds count and value
+    - Unreturned bonds from completed contracts
+  - **Risk Indicators:**
+    - Kategori 1 contracts (critical - 6 month deadline)
+    - Kategori 2 contracts (high risk - 4 month threshold)
+    - Bonds expiring in 7/30/90 days (tiered urgency)
+  - **Workflow Metrics:**
+    - Pending approvals count
+    - Recent alerts (last 7 days)
+    - Alert status tracking (sent/pending/failed)
+  - **Trend Analysis:**
+    - New contracts per month (12 months)
+    - Expired contracts per month (12 months)
+    - Contract value by department (top 10)
+    - Status distribution across all contracts
+
+- ✅ Testing & Validation:
+  - All 6 widgets created successfully
+  - PHP syntax validation passed for all widgets
+  - No diagnostic errors
+  - Caches cleared (optimize:clear, filament:optimize-clear)
+  - Application running without errors (php artisan about)
+  - Widgets automatically discovered by Filament
+
+- ✅ Addresses CLAUDE.md Requirements:
+  - ✅ Stats Overview Widget - KPI cards (kontrak aktif, bon akan tamat, etc.)
+  - ✅ Chart Widgets - Doughnut, line, bar charts using Chart.js
+  - ✅ Table Widget - Recent alerts with priority and status
+  - ✅ Executive dashboard with comprehensive visualizations
+  - ✅ Real-time data with automatic polling
+  - ✅ Color-coded indicators for risk levels
+  - ✅ Malay language throughout
+
 #### Remaining Phase 3 Tasks:
 - ✅ TASK-041: SST Validation & Business Logic (COMPLETED)
 - ✅ TASK-042: SST Approval Workflow (COMPLETED)
@@ -1488,8 +1633,8 @@
 - ✅ TASK-052: Document Management - Aduan (COMPLETED)
 - ✅ TASK-053: Document Management - LanjutanTempoh (COMPLETED)
 - ✅ TASK-054: Critical Alert Engine & Automated Notifications (COMPLETED) 🔔
-- ⏳ TASK-055: Dashboard Widgets & KPI Calculations (NEXT)
-- ⏳ TASK-056: Sprint 2 Demo
+- ✅ TASK-055: Dashboard Widgets & KPI Calculations (COMPLETED) 📊
+- ⏳ TASK-056: Sprint 2 Demo & Phase 3 Closeout
 
 ---
 
