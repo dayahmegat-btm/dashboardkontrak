@@ -23,7 +23,19 @@ class RoleResource extends Resource implements HasShieldPermissions
 {
     use HasShieldFormComponents;
 
+    protected static ?string $model = \Spatie\Permission\Models\Role::class;
+
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+
+    protected static ?string $navigationGroup = 'Pengurusan Sistem';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static ?string $modelLabel = 'Peranan';
+
+    protected static ?string $pluralModelLabel = 'Peranan';
 
     public static function getPermissionPrefixes(): array
     {

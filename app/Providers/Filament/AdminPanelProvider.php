@@ -28,9 +28,23 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Sistem Pengurusan Kontrak')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => [
+                    50 => '248, 250, 252',
+                    100 => '241, 245, 249',
+                    200 => '226, 232, 240',
+                    300 => '203, 213, 225',
+                    400 => '148, 163, 184',
+                    500 => '100, 116, 139',
+                    600 => '71, 85, 105',
+                    700 => '51, 65, 85',
+                    800 => '30, 41, 59',
+                    900 => '15, 23, 42',
+                    950 => '11, 26, 43', // Navy #0B1A2B
+                ],
             ])
+            ->font('Inter')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -39,7 +53,13 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+            ])
+            ->navigationGroups([
+                'Dashboard',
+                'Pengurusan Kontrak',
+                'Data Induk',
+                'Sistem',
+                'Pengurusan Sistem',
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -57,6 +77,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->sidebarCollapsibleOnDesktop()
+            ->maxContentWidth('full');
     }
 }

@@ -49,6 +49,9 @@ class User extends Authenticatable implements Auditable, FilamentUser, HasAvatar
         'last_login_ip',
         'password_changed_at',
         'force_password_change',
+        'preferences',
+        'default_page',
+        'sidebar_collapsed',
         'created_by',
         'updated_by',
     ];
@@ -77,9 +80,11 @@ class User extends Authenticatable implements Auditable, FilamentUser, HasAvatar
             'password' => 'hashed',
             'is_active' => 'boolean',
             'force_password_change' => 'boolean',
+            'sidebar_collapsed' => 'boolean',
             'last_login_at' => 'datetime',
             'password_changed_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
+            'preferences' => 'array',
         ];
     }
 

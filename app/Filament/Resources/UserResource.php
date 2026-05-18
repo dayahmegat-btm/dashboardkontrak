@@ -152,6 +152,38 @@ class UserResource extends Resource
                     ])
                     ->columns(3)
                     ->visible(fn (string $context): bool => $context === 'create' || auth()->user()->can('update', User::class)),
+
+                Forms\Components\Section::make('Tetapan Menu & Paparan')
+                    ->description('Konfigurasi tetapan paparan dan navigasi untuk pengguna ini')
+                    ->schema([
+                        Forms\Components\Select::make('default_page')
+                            ->label('Halaman Lalai')
+                            ->options([
+                                'dashboard' => 'Dashboard',
+                                'daftar-ssts' => 'Daftar SST',
+                                'daftar-kontraks' => 'Daftar Kontrak',
+                                'bon-pelaksanaans' => 'Bon Pelaksanaan',
+                                'penilaian-prestasis' => 'Penilaian Prestasi',
+                            ])
+                            ->placeholder('Pilih halaman lalai selepas log masuk')
+                            ->helperText('Halaman yang akan dibuka selepas pengguna log masuk')
+                            ->searchable(),
+                        Forms\Components\Toggle::make('sidebar_collapsed')
+                            ->label('Sidebar Dilipat Secara Lalai')
+                            ->default(false)
+                            ->helperText('Sidebar akan dilipat apabila pengguna log masuk')
+                            ->inline(false),
+                        Forms\Components\KeyValue::make('preferences')
+                            ->label('Tetapan Tambahan')
+                            ->keyLabel('Kunci')
+                            ->valueLabel('Nilai')
+                            ->addActionLabel('Tambah Tetapan')
+                            ->helperText('Tetapan khas untuk pengguna ini (opsional)')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2)
+                    ->collapsible()
+                    ->collapsed(),
             ]);
     }
 
