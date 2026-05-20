@@ -32,6 +32,7 @@ class DaftarSst extends Model implements Auditable
         'no_sst',
         'tajuk',
         'penerangan',
+        'tarikh_sst',
         'jabatan_id',
         'seksyen_unit_id',
         'pembekal_id',
@@ -64,6 +65,7 @@ class DaftarSst extends Model implements Auditable
     ];
 
     protected $casts = [
+        'tarikh_sst' => 'date',
         'tarikh_mula' => 'date',
         'tarikh_tamat' => 'date',
         'tarikh_lanjutan_1' => 'date',

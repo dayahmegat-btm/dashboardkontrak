@@ -131,6 +131,13 @@ class DaftarSstResource extends Resource
 
                 Forms\Components\Section::make('Tempoh & Tarikh')
                     ->schema([
+                        Forms\Components\DatePicker::make('tarikh_sst')
+                            ->label('Tarikh SST')
+                            ->required()
+                            ->displayFormat('d/m/Y')
+                            ->maxDate(now())
+                            ->helperText('Tarikh Surat Setuju Terima (SST) dikeluarkan')
+                            ->columnSpan(1),
                         Forms\Components\DatePicker::make('tarikh_mula')
                             ->label('Tarikh Mula')
                             ->required()
@@ -355,6 +362,12 @@ class DaftarSstResource extends Resource
                     ->money('MYR')
                     ->sortable()
                     ->alignEnd(),
+                Tables\Columns\TextColumn::make('tarikh_sst')
+                    ->label('Tarikh SST')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->description('Tarikh SST dikeluarkan'),
                 Tables\Columns\TextColumn::make('tarikh_mula')
                     ->label('Tarikh Mula')
                     ->date('d/m/Y')
@@ -608,6 +621,7 @@ class DaftarSstResource extends Resource
                                     Column::make('nilai_kontrak')->heading('Nilai Kontrak (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
                                     Column::make('nilai_komitmen')->heading('Nilai Komitmen (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
                                     Column::make('baki_kontrak')->heading('Baki (RM)')->formatStateUsing(fn ($state) => number_format($state, 2)),
+                                    Column::make('tarikh_sst')->heading('Tarikh SST')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
                                     Column::make('tarikh_mula')->heading('Tarikh Mula')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
                                     Column::make('tarikh_tamat')->heading('Tarikh Tamat')->formatStateUsing(fn ($state) => $state ? $state->format('d/m/Y') : ''),
                                     Column::make('hari_sehingga_tamat')->heading('Hari Sehingga Tamat'),
